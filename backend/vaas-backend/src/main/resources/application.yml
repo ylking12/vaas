@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: vaas-backend
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      database: 0
+      lettuce:
+        pool:
+          max-active: 16
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:3306/vaas?allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: ${DB_USER:root}
+    password: ${DB_PASSWD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+server:
+  servlet:
+    context-path: /spring/v1
+  port: 50410
+
+sensors:
+  road-ids:
+    1: { Station: "21098126", RoadCondition: "15500257", Atmospheric: "21098575" }
+    2: { Station: "21113177", RoadCondition: "15500542", Atmospheric: "21118286" }
+    3: { Station: "21113179", RoadCondition: "15500543", Atmospheric: "21118289" }
+    4: { Station: "21113178", RoadCondition: "15500545", Atmospheric: "21118288" }
+    5: { Station: "21113183", RoadCondition: "15500544", Atmospheric: "21118287" }
+  dataMatchSensor:
+    windStrength: Station
+    windSpeed: Station
+    windDirection: Station
+    airTemperature: Station
+    relativeHumidity: Station
+    roadConditions: RoadCondition
+    waterDepth: RoadCondition
+    iceThickness: RoadCondition
+    roadSurfaceTemperature: RoadCondition
+    atmosphericVisibility: Atmospheric
+  cache:
+    format:
+      measurement: { key: "Wsensor_{0}_last24h_measurement", dataType: Float, index: 0, unit: "", coefficient: 1 }
+      event: { key: "Wsensor_{0}_last24h_event", dataType: Float, index: 0, unit: "", coefficient: 1 }
+
+logging:
+  level:
+    com.etas.vaas.backend: debug
+    com.etas.vaas.common: debug

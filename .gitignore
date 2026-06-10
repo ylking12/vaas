@@ -1,0 +1,55 @@
+# --- Dependencies ---
+node_modules/
+.pnp
+.pnp.js
+
+# --- Build outputs ---
+dist/
+target/
+*.jar
+*.class
+*.war
+
+# --- IDE ---
+.vscode/
+.idea/
+*.iml
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+logs/
+*.log
+
+# --- Temp files ---
+/tmp/
+nohup.out
+*.pid
+*.seed
+
+# --- Reference decompiled (large binaries) ---
+reference/decompiled-jar/
+reference/decompiled-admin/*.beautified.js
+
+# --- Python virtual env (large binaries from decompilation) ---
+reference/**/venv/
+reference/**/*.so
+
+# --- Backup JARs ---
+*.jar.bak
+
+# --- Python cache ---
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# --- Credentials ---
+backend/config/password.txt
+backend/admin-api/config/password.txt
+backend/admin-api/src/main/resources/passwd
+
+# --- Large image assets ---
+frontend/dashboard/public/img/*.png

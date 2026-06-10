@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: receiver
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      database: 0
+      lettuce:
+        pool:
+          max-active: 16
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:3306/vaas?allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: ${DB_USER:root}
+    password: ${DB_PASSWD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+server:
+  port: 50412
+
+websocket:
+  kt-path: /ws/kt
+  motion-path: /ws/motion
+  location-path: /ws/location
+
+redis:
+  kt-max-queue-size: 80000
+  motion-max-queue-size: 80000
+  coordinate-max-queue-size: 80000
+
+gps:
+  clean-interval: 3600000
+
+area:
+  roadRange: 10
+  deduplicate: true
+  deduplicateRange: 5
+  longitude:
+    left: 120.31417995
+    right: 120.59721142
+  latitude:
+    top: 31.7394908
+    bottom: 31.44289605
+
+logging:
+  level:
+    com.etas.vaas.common.component: debug
+    com.etas.vaas.receiver.service: debug
+    com.etas.vaas.receiver.controller: info
+    com.etas.vaas.receiver.websocket: debug

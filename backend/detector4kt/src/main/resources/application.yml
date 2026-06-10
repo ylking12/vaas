@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: detector4kt
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      database: 0
+      lettuce:
+        pool:
+          max-active: 16
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:3306/vaas?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: ${DB_USER:root}
+    password: ${DB_PASSWD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+server:
+  port: 50413
+
+kt710:
+  max-queue-size: 80000
+  topic: kt710-topic
+  consumer-count: 1
+  key-prefix: kt710:queue
+
+algorithm:
+  kt:
+    bump:
+      enable: true
+      steer-ratio-diff-lv1: 0.1
+      steer-ratio-diff-lv2: 0.05
+      mean-break-pressure-threshold: 1
+      sum-speed-ratio-threshold: 3
+      correlation-threshold: 0.8
+      mean-speed-threshold: 9.7
+    slip:
+      enable: true
+      speed-threshold: 1.389
+      mu-threshold: 0.51
+
+processor:
+  debounce: true
+  debounceInterval: 5000
+  bumpy:
+    distance: 50
+  slippery:
+    speed-threshold: 1.389
+    mu-threshold: 0.51
+
+mode: prod
+kt-timezone: Asia/Shanghai
+
+logging:
+  level:
+    com.etas.vaas.detector: debug
