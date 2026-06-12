@@ -2,7 +2,14 @@
   <div class="dashboard-root">
     <div class="top-bar">
       <div class="top-left">
-        <span class="s-icon" @click="togglePanel">S</span>
+        <span class="s-icon" @click="togglePanel" title="切换面板">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+          </svg>
+        </span>
       </div>
       <div class="top-title">恶劣天气道路路面状态感知与预测系统</div>
       <div class="top-right">
@@ -16,24 +23,14 @@
           <div class="panel-btn" @click="openDrawer">实时数据</div>
         </div>
         <div class="panel-content" v-show="panelExpanded">
-          <div class="panel-section">
-            <h4>实时车队数据</h4>
-            <p class="fleet-count">联网车辆 <span class="num">{{ onlineCount }}</span> 辆</p>
-          </div>
-          <div class="panel-section">
-            <h4>路网状态</h4>
-            <div v-for="item in roadNetLayers" :key="item.key"
-              class="layer-option"
-              :class="{ active: selectedLayer === item.key && !item.isSpecial, 'coexist': item.isSpecial && selectedSpecial }"
-              @click="toggleLayer(item)">
-              <span>{{ item.label }}</span>
-            </div>
-          </div>
-          <div class="panel-section">
-            <h4>实时气象数据</h4>
-            <p>降水量 <span class="num">{{ precipText }}</span></p>
-            <el-button text type="primary" @click="showWeatherDevice">查看气象设备</el-button>
-          </div>
+          <LayerPanel
+            :online-count="onlineCount"
+            :precip-text="precipText"
+            :selected-layer="selectedLayer"
+            :selected-special="selectedSpecial"
+            @toggle-layer="toggleLayer"
+            @show-weather-device="showWeatherDevice"
+          />
         </div>
       </div>
       <MapView ref="mapViewRef" @map-ready="onMapReady" @vehicle-click="onVehicleClick" @event-click="onEventClick" @station-click="onStationClick" />
@@ -43,26 +40,17 @@
         <span>未来1h</span>
       </div>
     </div>
-    <el-drawer v-model="drawerVisible" direction="ltr" size="70%" title="实时数据">
+    <el-drawer v-model="drawerVisible" direction="ltr" size="100%" title="实时数据">
       <div class="drawer-grid">
         <div class="drawer-left">
-          <div class="panel-section">
-            <h4>实时车队数据</h4>
-            <p class="fleet-count">联网车辆 <span class="num">{{ onlineCount }}</span> 辆</p>
-          </div>
-          <div class="panel-section">
-            <h4>路网状态</h4>
-            <div v-for="item in roadNetLayers" :key="item.key"
-              class="layer-option" :class="{ active: selectedLayer === item.key && !item.isSpecial, 'coexist': item.isSpecial && selectedSpecial }"
-              @click="toggleLayer(item)">
-              <span>{{ item.label }}</span>
-            </div>
-          </div>
-          <div class="panel-section">
-            <h4>实时气象数据</h4>
-            <p>降水量 <span class="num">{{ precipText }}</span></p>
-            <el-button text type="primary" @click="showWeatherDevice">查看气象设备</el-button>
-          </div>
+          <LayerPanel
+            :online-count="onlineCount"
+            :precip-text="precipText"
+            :selected-layer="selectedLayer"
+            :selected-special="selectedSpecial"
+            @toggle-layer="toggleLayer"
+            @show-weather-device="showWeatherDevice"
+          />
         </div>
         <div class="drawer-center">
           <div class="panel-section">
@@ -135,16 +123,27 @@
         </div>
       </div>
     </el-drawer>
+
+    <!-- P7-iter.2-1: 自定义 Popup 替代 ElMessageBox -->
+    <Popup v-model="popupVisible" :title="popupTitle" :type="popupType" :show-default-buttons="popupHasButtons" @confirm="onPopupConfirm" @cancel="onPopupCancel">
+      <div v-if="popupData" class="popup-detail">
+        <div v-for="(value, key) in popupData" :key="key" class="popup-row">
+          <span class="popup-label">{{ key }}</span>
+          <span class="popup-value">{{ value }}</span>
+        </div>
+      </div>
+    </Popup>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, onBeforeUnmount, watch } from 'vue'
-import { ElMessageBox, ElMessage } from 'element-plus'
 import { useDashboardStore } from '../stores/dashboard'
 import * as api from '../api'
 import MapView from '../components/MapView.vue'
 import SensorChart from '../components/SensorChart.vue'
+import Popup from '../components/Popup.vue'
+import LayerPanel from '../components/LayerPanel.vue'
 import * as XLSX from 'xlsx'
 
 const store = useDashboardStore()
@@ -162,16 +161,18 @@ const summaryData = reactive({ num_bumpyroad: 0, num_wetroad: 0, num_waterroad: 
 const onlineCount = ref(0)        // 联网车辆数（来自 /location 接口）
 const precipText = ref('--')     // 降水量（来自 /get_weather.precip）
 const selectedLayer = ref('dryWet')
+
+// P7-iter.2-1: 自定义 Popup 状态
+const popupVisible = ref(false)
+const popupTitle = ref('提示')
+const popupType = ref('info')            // info | success | warning | danger
+const popupData = ref(null)              // {label: value} 形式展示
+const popupHasButtons = ref(true)        // 决定是否显示底部默认按钮
+const pendingEvent = ref(null)           // 事件删除确认时暂存
 const selectedSpecial = ref(true)
 const chartRef = ref(null)
 
-const roadNetLayers = [
-  { key: 'dryWet', label: '路面干湿状态图层', isSpecial: false },
-  { key: 'friction', label: '路面附着系数图层', isSpecial: false },
-  { key: 'temperature', label: '路面温度状态图层', isSpecial: false },
-  { key: 'flood', label: '路面积水颠簸事件', isSpecial: true }
-]
-
+// P7-iter.2-3: roadNetLayers 已抽到 LayerPanel.vue 内部
 const sensors = [
   { key: 1, name: '文惠路与锦绣路' },
   { key: 2, name: '先锋中路与新锡路' },
@@ -235,22 +236,51 @@ function exportAlarm() {
 }
 
 function onVehicleClick(v) {
-  ElMessageBox.alert(`车牌号：${v.plate || '--'}\n速度：${v.speed || '--'} km/h`, '车辆信息')
+  popupTitle.value = '车辆信息'
+  popupType.value = 'info'
+  popupData.value = {
+    '车牌号': v.plate || '--',
+    '速度': `${v.speed || '--'} km/h`
+  }
+  popupHasButtons.value = false
+  popupVisible.value = true
 }
 
 function onEventClick(e) {
-  ElMessageBox.confirm(`类型：${e.eventType}\n位置：${e.longitude || '--'}, ${e.latitude || '--'}\n时间：${e.eventTime || '--'}`, '确认删除事件？', {
-    confirmButtonText: '删除',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    api.deleteEvent(e.eventId, e.eventType).catch(() => {})
-    loadAlarmList()
-  }).catch(() => {})
+  // 保存待删除事件引用，Popup 确认时使用
+  pendingEvent.value = e
+  popupTitle.value = '确认删除事件？'
+  popupType.value = 'warning'
+  popupData.value = {
+    '类型': e.eventType,
+    '位置': `${e.longitude || '--'}, ${e.latitude || '--'}`,
+    '时间': e.eventTime || '--'
+  }
+  popupHasButtons.value = true
+  popupVisible.value = true
 }
 
 function onStationClick(s) {
-  ElMessageBox.alert(`气象站：${s.name}`, '气象设备')
+  popupTitle.value = '气象设备'
+  popupType.value = 'info'
+  popupData.value = {
+    '站点名': s.name,
+    '坐标': `${s.pos?.[0] || '--'}, ${s.pos?.[1] || '--'}`
+  }
+  popupHasButtons.value = false
+  popupVisible.value = true
+}
+
+function onPopupConfirm() {
+  if (pendingEvent.value) {
+    api.deleteEvent(pendingEvent.value.eventId, pendingEvent.value.eventType).catch(() => {})
+    loadAlarmList()
+    pendingEvent.value = null
+  }
+}
+
+function onPopupCancel() {
+  pendingEvent.value = null
 }
 
 function loadAlarmList() {
@@ -380,10 +410,11 @@ onBeforeUnmount(() => {
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body, #app { width: 100%; height: 100%; overflow: hidden; font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
 .dashboard-root { width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; background: #020203; }
-.coloured-ribbon { height: 4px; width: 100%; background: linear-gradient(90deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #6c5ce7); }
+.coloured-ribbon { height: 3px; width: 100%; background: linear-gradient(90deg, #32281e 0%, #6b4a25 25%, #c19a5b 50%, #FFF6DA 75%, #32281e 100%); }
 .top-bar { height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; z-index: 10; }
 .top-title { font-size: 19.2px; font-weight: 500; color: #FFF6DA; letter-spacing: 2px; font-family: 'Noto Sans SC', sans-serif; }
-.s-icon { cursor: pointer; font-size: 20px; font-weight: bold; color: #FFF6DA; padding: 8px; }
+.s-icon { cursor: pointer; color: #FFF6DA; padding: 6px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; transition: background 0.2s; }
+.s-icon:hover { background: rgba(255, 246, 218, 0.1); }
 .main-area { flex: 1; position: relative; overflow: hidden; }
 .left-panel { position: absolute; left: 0; top: 0; height: 100%; width: 43px; background: transparent; transition: width 0.3s; z-index: 5; overflow: hidden; }
 .left-panel.expanded { background: rgba(0,0,0,0.8); width: 288px; }
@@ -392,11 +423,6 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; font-family: 'No
 .panel-content { width: 245px; padding: 12px; color: #c0d0e0; font-size: 13px; }
 .panel-section { margin-bottom: 20px; }
 .panel-section h4 { font-size: 14px; color: #FFF6DA; margin-bottom: 8px; border-bottom: 1px solid rgba(255,246,218,0.2); padding-bottom: 4px; }
-.layer-option { padding: 6px 8px; cursor: pointer; border-radius: 4px; margin-bottom: 2px; color: #a0b0c0; }
-.layer-option.active { background: linear-gradient(90deg, #32281e, #FFF6DA); color: #FFF6DA; }
-.layer-option.coexist { background: linear-gradient(90deg, #2d3a1e, #67C23A); color: #FFF6DA; }
-.fleet-count { color: #FFF6DA; font-size: 16px; }
-.fleet-count .num, .panel-section p > .num { color: #FFF6DA; font-size: 18px; font-weight: 600; margin: 0 2px; }
 .time-slider { position: absolute; bottom: 0; left: 0; right: 0; height: 54px; background: #000; display: flex; align-items: center; padding: 0 24px; gap: 16px; z-index: 5; color: #c0d0e0; }
 .time-slider .el-slider { flex: 1; }
 .drawer-grid { display: flex; gap: 16px; height: 100%; background: #1a1a1a; color: #FFF6DA; }
@@ -428,4 +454,11 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; font-family: 'No
 .maintain-title { font-size: 12px; color: #FFF6DA; margin: 12px 0 6px 0; opacity: 0.8; }
 .maintain-list { font-size: 13px; color: #FFF6DA; min-height: 20px; padding: 4px 0; }
 .maintain-list .no-data { color: #666; font-style: italic; }
+
+/* P7-iter.2-1: 自定义 Popup 详情样式 */
+.popup-detail { display: flex; flex-direction: column; gap: 8px; }
+.popup-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed rgba(255, 246, 218, 0.1); }
+.popup-row:last-child { border-bottom: none; }
+.popup-label { color: #a0a0a0; font-size: 13px; }
+.popup-value { color: #FFF6DA; font-size: 14px; font-weight: 500; }
 </style>

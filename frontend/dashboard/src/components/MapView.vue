@@ -39,13 +39,61 @@ function loadAMap() {
   })
 }
 
+// P7-iter.2-2: 车辆/事件/气象站标记重做，使用内嵌 SVG + CSS 动画
+
+// 车辆图标 SVG（简洁车型：圆角车身 + 方向三角）
+const VEHICLE_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="20" viewBox="0 0 36 20">
+  <defs>
+    <linearGradient id="vg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#32281e"/>
+      <stop offset="1" stop-color="#FFF6DA"/>
+    </linearGradient>
+  </defs>
+  <path d="M3 14 L4 6 Q5 4 8 4 L28 4 Q31 4 32 6 L33 14 Z" fill="url(#vg)" stroke="#1a1a1a" stroke-width="1"/>
+  <polygon points="29,9 33,9 31,13" fill="#FFF6DA"/>
+  <circle cx="9" cy="16" r="2.5" fill="#1a1a1a"/>
+  <circle cx="27" cy="16" r="2.5" fill="#1a1a1a"/>
+</svg>
+`
+
+// 事件标记 SVG（中心点 + 脉冲环）
+const eventMarkerSvg = (color) => `
+<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+  <circle class="pulse-ring" cx="14" cy="14" r="13" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.6"/>
+  <circle cx="14" cy="14" r="6" fill="${color}" stroke="#fff" stroke-width="1.5"/>
+  <circle cx="14" cy="14" r="2.5" fill="#fff"/>
+</svg>
+`
+
+// 气象站图标 SVG（塔形 + 信号环）
+const STATION_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" width="26" height="32" viewBox="0 0 26 32">
+  <defs>
+    <radialGradient id="sg" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#67C23A" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#67C23A" stop-opacity="0.3"/>
+    </radialGradient>
+  </defs>
+  <circle cx="13" cy="20" r="11" fill="url(#sg)"/>
+  <rect x="11" y="3" width="4" height="22" rx="1" fill="#1a1a1a" stroke="#67C23A" stroke-width="1.5"/>
+  <circle cx="13" cy="6" r="2.5" fill="#67C23A" stroke="#fff" stroke-width="1"/>
+  <path d="M6 28 L20 28" stroke="#67C23A" stroke-width="2" stroke-linecap="round"/>
+  <text x="13" y="13" text-anchor="middle" font-size="6" fill="#fff" font-family="Arial">°C</text>
+</svg>
+`
+
 function addVehicleMarkers(vehicles) {
   clearMarkers(vehicleMarkers)
   vehicleMarkers = vehicles.map(v => {
+    const el = document.createElement('div')
+    el.className = 'vehicle-marker'
+    el.innerHTML = VEHICLE_SVG
+    el.title = v.plate || '车辆'
     const marker = new AMap.Marker({
       position: [v.lng, v.lat],
-      content: `<div class="vehicle-marker">${v.plate || '车辆'}</div>`,
-      offset: new AMap.Pixel(-20, -20)
+      content: el,
+      offset: new AMap.Pixel(-18, -10)
     })
     marker.on('click', () => emit('vehicle-click', v))
     marker.setMap(map)
@@ -55,12 +103,25 @@ function addVehicleMarkers(vehicles) {
 
 function addEventMarkers(events) {
   clearMarkers(eventMarkers)
+  const colorMap = { bump: '#F56C6C', slip: '#E6A23C', ponding: '#409EFF', ice: '#67C23A', low_attachment: '#909399' }
+  const labelMap = { bump: '颠', slip: '滑', ponding: '积', ice: '冰', low_attachment: '低' }
   eventMarkers = events.map(e => {
-    const colorMap = { bump: '#F56C6C', slip: '#E6A23C', ponding: '#409EFF', ice: '#67C23A', low_attachment: '#909399' }
+    const color = colorMap[e.eventType] || '#F56C6C'
+    const el = document.createElement('div')
+    el.className = 'event-marker'
+    el.setAttribute('data-type', e.eventType)
+    el.setAttribute('data-color', color)
+    el.title = `${e.eventType || '事件'} - ${e.eventTime || ''}`
+    el.innerHTML = `
+      <div class="event-pulse" style="background:${color}"></div>
+      <div class="event-core" style="background:${color}">
+        <span class="event-label">${labelMap[e.eventType] || '!'}</span>
+      </div>
+    `
     const marker = new AMap.Marker({
       position: [e.longitude || e.lng, e.latitude || e.lat],
-      content: `<div style="width:12px;height:12px;border-radius:50%;background:${colorMap[e.eventType]||'#F56C6C'};border:2px solid #fff"></div>`,
-      offset: new AMap.Pixel(-6, -6)
+      content: el,
+      offset: new AMap.Pixel(-14, -14)
     })
     marker.on('click', () => emit('event-click', e))
     marker.setMap(map)
@@ -72,10 +133,15 @@ function addStationMarkers(active) {
   clearMarkers(stationMarkers)
   const list = active ? STATIONS : []
   stationMarkers = list.map(s => {
+    const el = document.createElement('div')
+    el.className = 'station-marker'
+    el.innerHTML = STATION_SVG
+    el.title = s.name
+    el.style.cursor = 'pointer'
     const marker = new AMap.Marker({
       position: s.pos,
-      content: '<div style="width:16px;height:16px;border-radius:50%;background:#67C23A;border:2px solid #fff;cursor:pointer">🌡️</div>',
-      offset: new AMap.Pixel(-8, -8)
+      content: el,
+      offset: new AMap.Pixel(-13, -28)
     })
     marker.on('click', () => emit('station-click', s))
     marker.setMap(map)
@@ -247,4 +313,57 @@ onBeforeUnmount(() => { if (map) map.destroy() })
 
 <style scoped>
 .map-wrapper { width: 100%; height: 100%; }
+
+/* P7-iter.2-2: 地图标记样式 */
+.vehicle-marker {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  transition: transform 0.15s;
+  cursor: pointer;
+}
+.vehicle-marker:hover { transform: scale(1.15); }
+
+.event-marker {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+.event-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  opacity: 0.4;
+  animation: event-pulse 1.8s ease-out infinite;
+}
+.event-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border: 2px solid #fff;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.event-label {
+  font-size: 11px;
+  font-weight: bold;
+  color: #fff;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+@keyframes event-pulse {
+  0%   { transform: scale(0.6); opacity: 0.7; }
+  100% { transform: scale(2.0); opacity: 0; }
+}
+
+.station-marker {
+  filter: drop-shadow(0 2px 6px rgba(103, 194, 58, 0.5));
+  transition: transform 0.15s;
+}
+.station-marker:hover { transform: scale(1.1); }
 </style>
