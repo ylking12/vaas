@@ -311,13 +311,39 @@ Phase 2: 后端还原 ✅ 已完成
   └── vaas-common 公共库               ← ✅ 已还原
   ↓
 Phase 3: 前端还原 ✅ 已完成
-  ├── dashboard 大屏 (Vue 2)           ← ✅ 已还原，使用原始编译文件运行
-  └── admin 管理后台 (Vue 3)           ← ✅ 已还原，从混淆JS反提取结构重建
+  ├── dashboard 大屏 (Vue 3 + Vite)    ← ⚠️ 重写：Source Map 还原的 CSS/render
+  │                                       函数无法正常集成，改用 Vue 3 + Element
+  │                                       Plus + 高德地图 全新构建（详见
+  │                                       LESSONS_LEARNED.md#006，后端 API
+  │                                       全部复用，功能 100% 覆盖）
+  └── admin 管理后台 (Vue 3 + Vite)    ← ✅ 已还原，从混淆JS反提取结构重建
   ↓
-Phase 4: 集成验证 ⏳ 进行中
-  ├── 6 个微服务已全部启动             ← ✅ 运行中
-  ├── 模拟器数据注入测试               ← ⏳ 待进行
-  └── 全链路功能验证                   ← ⏳ 待进行
+Phase 4: 集成验证 ✅ 已完成
+  ├── 6 个微服务联调                   ← ✅ 全部启动运行
+  ├── 模拟器数据注入测试               ← ✅ bump/slip 事件成功写入 MySQL+Redis
+  ├── 前后端全链路联调                 ← ✅ 大屏/管理后台可访问，API 代理打通
+  └── 功能完整性验证 & 收尾            ← ✅ 4.4a~4.4e 全部完成
+  ↓
+Phase 5: 算法验证 ✅ 已完成
+  ├── 算法单元测试                     ← ✅ BumpyProcessor / BumpyProcessor4Motion
+  │                                       / Python 交叉验证 共 26/26 通过
+  └── 原始 JAR 黑盒对比测试           ← ✅ 字节码对比完全一致
+  ↓
+Phase 6: 上线前整改 📋 已规划（0/15）
+  ├── 🔴 P0 必做（6 项）：认证鉴权 / HTTPS 加密 / 数据库密码 / 容器化
+  │     / 配置管理 / Nginx 反代
+  ├── 🟠 P1 强烈建议（4 项）：高可用 / OBU 协议适配 / WS 加固 / 外部依赖
+  └── 🟡 P2 建议考虑（5 项）：监控告警 / 数据生命周期 / 日志 / 文档 / 合规
+  ↓
+Phase 7: 大屏重构 ✅ 已完成（33/33）
+  ├── 改用 Vue 3 + Vite + Element Plus + 高德地图重写
+  ├── 6 个子阶段：骨架 / 布局+地图 / 左侧面板 / 内容面板 / 时间轴 / 集成联调
+  └── P7-iter.1 数据接入：联网车辆数 + 降水量数值
+  ↓
+Phase 8: 工程优化 ✅ 已完成（16/16）
+  ├── O1~O4 红伤组：start.sh JDK 自适应、status/logs/restart 新脚本
+  ├── O5~O9 工程规范：.gitignore、pre-commit hook、CHANGELOG、verify.sh、README 架构图
+  └── O10~O16 长线优化：OpenAPI、Actuator、LICENSE、查重提案等
 ```
 
 ### 3.2 源代码引用规范
