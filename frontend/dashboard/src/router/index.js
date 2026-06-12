@@ -1,9 +1,14 @@
-import Vue from 'vue'
-import VueRouter from 'vue-router'
-Vue.use(VueRouter)
+import { createRouter, createWebHashHistory } from 'vue-router'
+
 const routes = [
-  { path: '/dashboard', component: () => import('../views/DashboardPage') },
+  { path: '/dashboard', name: 'Dashboard', component: () => import('../views/DashboardPage.vue') },
   { path: '/', redirect: '/dashboard' },
-  { path: '*', redirect: '/dashboard' },
+  { path: '/:pathMatch(.*)*', redirect: '/dashboard' }
 ]
-export default new VueRouter({ mode: 'hash', base: process.env.BASE_URL, routes })
+
+const router = createRouter({
+  history: createWebHashHistory(),
+  routes
+})
+
+export default router

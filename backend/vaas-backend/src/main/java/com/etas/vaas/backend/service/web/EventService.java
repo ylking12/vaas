@@ -112,7 +112,8 @@ public class EventService {
             if (cachedEvent.getEventType() == EventType.PONDING) {
                 alarmResponse.setSourceName("\u8def\u6d4b\u6c14\u8c61\u7ad9");
             } else {
-                String plateNumber = ((FleetManagement)this.fleetManagementComponent.getDeviceId2CarMap().get(cachedEvent.getDeviceId())).getPlate();
+                FleetManagement fm = (FleetManagement)this.fleetManagementComponent.getDeviceId2CarMap().get(cachedEvent.getDeviceId());
+                String plateNumber = fm != null ? fm.getPlate() : null;
                 if (StringUtils.isEmpty((CharSequence)plateNumber)) {
                     alarmResponse.setSourceName("\u82cfB*****");
                 } else {

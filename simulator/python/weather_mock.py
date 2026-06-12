@@ -3,9 +3,9 @@ Open-Meteo 天气数据模拟服务
 免费开源天气 API（无需 Key），用于替代物理气象站 SDK
 来源: https://open-meteo.com/
 """
-import requests
 import json
 import time
+import subprocess
 import pymysql
 from datetime import datetime
 
@@ -24,11 +24,16 @@ DISTRICTS = {
 }
 
 def fetch_weather():
-    """从 Open-Meteo 获取实时天气"""
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={WUXI_LAT}&longitude={WUXI_LON}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m"
+    """从 Open-Meteo 获取实时天气（用 curl 绕过 LibreSSL 问题）"""
+    url = (f"https://api.open-meteo.com/v1/forecast"
+           f"?latitude={WUXI_LAT}&longitude={WUXI_LON}"
+           f"&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m")
     try:
-        r = requests.get(url, timeout=10)
-        data = r.json()
+        result = subprocess.run(
+            ["curl", "-s", "--max-time", "15", "--noproxy", "*", url],
+            capture_output=True, text=True, timeout=20
+        )
+        data = json.loads(result.stdout)
         current = data.get("current", {})
         return {
             "temp": current.get("temperature_2m"),

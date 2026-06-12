@@ -202,7 +202,7 @@
 后端模式:   receiver 使用 WebFlux（响应式）；其余服务使用 Spring MVC
 数据库:     MySQL 9.6 (开发环境) / MySQL 5.7+ (生产) / Redis 8.8 (开发) / Redis 6.x (生产)
 权限框架:   Sa-Token (cn.dev33.satoken)，管理后台认证
-前端大屏:   Vue 2 + Webpack + Element UI + ECharts
+前端大屏:   Vue 3 + Vite + Element Plus + ECharts + 高德地图 JS API
 前端管理台:  Vue 3 + Vite 5.9.0 + Element Plus
 地图:       高德地图 / 百度地图 API
 气象站SDK:  NetDeviceSDKP3 (厂商提供，不还原，已创建桩接口)
@@ -230,14 +230,13 @@ vaas-reproduction/
 ├── CLAUDE.md                     # AI 辅助开发规则 (每次启动读取)
 │
 ├── frontend/
-│   ├── dashboard/                # 大屏可视化 (Vue 2 + Webpack)
+│   ├── dashboard/                # 大屏可视化 (Vue 3 + Vite)
 │   │   └── src/
-│   │       ├── views/            # 页面组件
-│   │       ├── components/       # 通用组件
+│   │       ├── views/            # 页面组件 (DashboardPage.vue)
+│   │       ├── components/       # 组件 (MapView/SensorChart/...)
 │   │       ├── router/           # 路由
-│   │       ├── store/            # 状态管理
-│   │       ├── utils/            # 工具函数
-│   │       ├── data/             # 数据/配置
+│   │       ├── stores/           # Pinia 状态管理
+│   │       ├── api/              # Axios API 封装
 │   │       └── assets/           # 静态资源
 │   │
 │   └── admin/                    # 管理后台 (Vue 3 + Vite)

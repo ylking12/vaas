@@ -47,25 +47,17 @@
 
 ## 每次会话开始的强制操作
 
-每次启动工作前，必须先阅读以下三个文件：
+### 第一步：读取上下文摘要
+先读取 **[ _CONTEXT_SUMMARY.md](./_CONTEXT_SUMMARY.md)**（精简版），快速了解项目当前状态、架构、关键配置和红线规则。
 
-**1️⃣ [PROJECT_RULES.md](./PROJECT_RULES.md)** — 项目全景了解
-- 项目全景解读（架构、算法、数据流、API接口、页面结构）
-- 当前阶段的复现策略和优先级
-- 代码质量约束和规范
-- 目录结构和工作流
+### 第二步：按需读取完整文件
+摘要不足以支撑当前任务时，再读取对应完整文件：
 
-**2️⃣ [TASK_TRACKING.md](./TASK_TRACKING.md)** — 当前任务进度
-- 查看当前进行到哪个任务
-- 确认上一个任务的完成状态
-- 明确接下来该做什么
+- **[PROJECT_RULES.md](./PROJECT_RULES.md)** — 项目全景（架构、算法、数据流）
+- **[TASK_TRACKING.md](./TASK_TRACKING.md)** — 任务进度（查看当前任务状态）
+- **[LESSONS_LEARNED.md](./LESSONS_LEARNED.md)** — 问题复盘与预防
 
-**3️⃣ [LESSONS_LEARNED.md](./LESSONS_LEARNED.md)** — 问题与复盘
-- 查看已记录的历史问题和根因
-- 检查预防措施清单
-- 避免同类问题再次发生
-
-若以上文件有更新，必须重新读取后再继续工作。
+> 注意：每次读取完整文件会增加 ~15K token 上下文开销。仅在需要时读取，读取后及时标记为"已读"。
 
 ## 每次任务完成后的强制操作
 
@@ -97,7 +89,10 @@
 | 缺失的泛型类型 | 补充，不影响运行时行为 |
 | import优化 | 允许，消除未使用的导入 |
 
-### 1.3 绝对禁止的行为
+### 1.3 绝对禁止的行为 — 诚信底线
+- ❌ **严禁编写 Demo 页面/模拟数据/假界面来冒充还原产物。任何展示给用户的必须是真实还原或真实构建的代码。**
+- ❌ **严禁在未征得用户同意的情况下用替代品顶替未完成的工作。必须明确告知用户"未完成"并征求意见。**
+- ❌ **严禁隐瞒代码的真实来源。向用户交付时必须说清：哪些是还原的、哪些是补充的、哪些是缺失的。**
 - ❌ 修改原始业务逻辑、算法阈值、判定条件
 - ❌ 修改API签名（路径、请求方法、参数名、返回值结构）
 - ❌ 修改数据库表结构、字段名、索引设计
@@ -106,6 +101,8 @@
 - ❌ 升级JDK版本（锁定Java 8）
 - ❌ 混入第三方闭源代码到还原产物中
 - ❌ 提交真实密码/API Key/证书到代码库
+
+**以上第一条为最高优先级规则，优先级高于所有其他规则。违反此规则即意味着项目失去存在意义。**
 
 ---
 
@@ -238,95 +235,23 @@
 - Source Map 不完整的文件列表
 - 与设计文档不一致的发现
 
----
+### 4.4 任务和问题记录规范
 
-## 五、各模块技术细节
+**一条铁律：所有待处理事项只记一个地方 —— TASK_TRACKING.md**
 
-### 5.1 后端 - receiver 服务
+包括但不限于：
+- 计划做的任务 → 记入对应 Phase 的子任务
+- 发现的问题/bug → 记入"已知问题 / 已知缺项"章节
+- 上线前需整改的事项 → 记入 Phase 6
+- 挂起的优化建议 → 记入"已知问题"章节
 
-| 项目 | 内容 |
-|------|------|
-| 包名 | com.etas.vaas.receiver |
-| 端口 | 50412 |
-| WebSocket端点 | /ws/kt, /ws/motion, /ws/location |
-| 数据库 | MySQL (vaas) + Redis |
-| 配置方式 | application.yml + 环境变量 |
-| 数据缓存 | Redis Hash/List/PubSub，key前缀 `vaas:` |
-| 地理范围 | 无锡市：经度 [120.31, 120.60]，纬度 [31.44, 31.74] |
+**禁止**：
+- ❌ 禁止在记忆系统（.claude/memory/）中记录待处理事项
+- ❌ 禁止在 LESSONS_LEARNED.md 中记录未来的待办任务
+- ❌ 禁止在对话中口头承诺"以后做"而不落盘
 
-### 5.2 后端 - vaas-backend 服务
+**允许**：
+- ✅ 记忆系统只存背景知识、架构信息、决策理由（非待办）
+- ✅ LESSONS_LEARNED.md 只记已发生的问题复盘（已发生的事情）
+- ✅ TASK_TRACKING.md 顶部维护进度概要统计表
 
-| 项目 | 内容 |
-|------|------|
-| 包名 | com.bosch.cs.rcs |
-| 作用 | 核心业务 + 算法引擎 |
-| 算法 | 颠簸检测、干湿识别、附着系数、气象事件 |
-| 数据源 | Redis（消费receiver写入的数据） |
-| 事件推送 | SSE (Server-Sent Events) |
-
-### 5.3 前端 - 大屏 (dashboard)
-
-| 项目 | 内容 |
-|------|------|
-| 框架 | Vue 2 + Webpack |
-| UI库 | Element UI + ECharts |
-| 地图 | 高德/百度地图 API |
-| 路由 | 单页 `/dashboard`，`/` 跳转到 `/dashboard` |
-| 状态管理 | Vuex (selectBur时间选择器, sensorData传感器数据) |
-| HTTP | Axios (baseURL 来自 VUE_APP_URL 环境变量) |
-| 组件结构 | road-map(地图) + layer(图层) + road-info(路况) + alarm(告警) + rcs-service(服务) + event(事件弹窗) |
-
-### 5.4 前端 - 管理后台 (admin)
-
-| 项目 | 内容 |
-|------|------|
-| 框架 | Vue 3 + Vite (v5.9.0) |
-| UI库 | Element Plus |
-| 页面 | 首页、车辆绑定、心跳管理、动态日志、系统配置、设备管理、权限管理、数据报表、异常页面 |
-
-### 5.5 Redis 数据结构速查
-
-| Key模式 | 类型 | 用途 |
-|---------|------|------|
-| `vaas:vehicle:info:<deviceId>` | List | 车辆历史坐标（经纬度,速度,时间戳） |
-| `vaas:bump:counter` | Hash | 颠簸事件计数器 |
-| `vaas:slip:counter` | Hash | 湿滑事件计数器 |
-| `vaas:ponding:counter` | Hash | 积水事件计数器 |
-| `vaas:ice:counter` | Hash | 结冰事件计数器 |
-| `vaas:low-attachment:counter` | Hash | 低附着事件计数器 |
-| `vaas:bump:event` | String(JSON) | 24h内颠簸事件 |
-| `vaas:slip:event` | String(JSON) | 24h内湿滑事件 |
-| `vaas:ice:event` | String(JSON) | 24h内结冰事件 |
-| `vaas:ponding:event` | String(JSON) | 24h内积水事件 |
-| `vaas:low-attachment:event` | String(JSON) | 24h内低附着事件 |
-| `vaas:road:segment:coordinates` | Geo | 路段坐标 |
-| `vaas:road:segment:map` | Hash | 路段ID→名称映射 |
-| `vaas:event:topic` | PubSub | 事件推送主题 |
-| `vaas:kt710:notifier` | PubSub | KT710通知主题 |
-| `vaas:vehicle:kt` | List | KT710原始数据队列 |
-| `Wsensor_<sensorId>_last24h_measurement` | String(JSON) | 气象站实时数据 |
-
-### 5.6 核心事件类型
-
-| eventType | 含义 | 说明 |
-|-----------|------|------|
-| bumpy / bump | 路面颠簸 | Z轴加速度异常 |
-| slip / wet | 路面湿滑 | wetFlag 或气象数据判断 |
-| ponding | 路面积水 | 降雨+排水不畅 |
-| ice | 路面结冰 | 低温+高湿度 |
-| low-attachment | 低附着系数 | μ值 < 0.2 |
-
----
-
-## 六、质量验收标准
-
-### 每阶段完成时的验证
-
-| 阶段 | 验证项 |
-|------|--------|
-| 素材提取完成 | 文件完整、无遗漏、目录结构清晰 |
-| 后端还原完成 | 可 mvn compile 通过、关键配置齐全 |
-| 算法模块完成 | 单元测试覆盖正常值和边界值、与文档一致 |
-| 大屏还原完成 | 路由正确、API调用正常、组件渲染无报错 |
-| 管理后台完成 | 页面路由一致、CRUD功能完整 |
-| 集成完成 | 模拟器数据注入 → 后端处理 → 前端展示 全链路跑通 |

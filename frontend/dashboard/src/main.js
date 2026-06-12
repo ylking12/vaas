@@ -1,9 +1,14 @@
-import Vue from 'vue'
-import App from './App'
+import { createApp } from 'vue'
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
+import App from './App.vue'
 import router from './router'
+import { createPinia } from 'pinia'
+import http from './api'
 
-new Vue({
-  el: '#app',
-  router,
-  render: h => h(App)
-})
+const app = createApp(App)
+app.use(ElementPlus)
+app.use(router)
+app.use(createPinia())
+app.config.globalProperties.$http = http
+app.mount('#app')
