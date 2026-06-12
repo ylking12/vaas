@@ -54,3 +54,16 @@ kt-timezone: Asia/Shanghai
 logging:
   level:
     com.etas.vaas.detector: debug
+
+# P8-8.16: Actuator 健康检查
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+  info:
+    env:
+      enabled: true

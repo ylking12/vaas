@@ -48,3 +48,16 @@ logging:
     com.etas.vaas.receiver.service: debug
     com.etas.vaas.receiver.controller: info
     com.etas.vaas.receiver.websocket: debug
+
+# P8-8.16: Actuator 健康检查
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+  info:
+    env:
+      enabled: true

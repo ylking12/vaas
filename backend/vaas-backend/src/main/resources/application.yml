@@ -47,3 +47,23 @@ logging:
   level:
     com.etas.vaas.backend: debug
     com.etas.vaas.common: debug
+
+# P8-8.10: OpenAPI/Swagger 文档
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha
+  show-actuator: false
+
+# P8-8.16: Actuator 健康检查
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized

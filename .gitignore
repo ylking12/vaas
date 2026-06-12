@@ -53,3 +53,11 @@ backend/admin-api/src/main/resources/passwd
 
 # --- Large image assets ---
 frontend/dashboard/public/img/*.png
+frontend/admin/dist/             # Vite 构建产物（dashboard 已 ignore dist/）
+
+# --- Editor temp files ---
+*.swp                            # vim
+*.swo                            # vim
+*~                               # emacs/backup
+*.iws                            # IntelliJ workspace
+*.pid.lock                       # 防止并发启动冲突

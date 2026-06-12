@@ -15,6 +15,8 @@
         <dependency><groupId>com.baomidou</groupId><artifactId>mybatis-plus-spring-boot3-starter</artifactId></dependency>
         <dependency><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><optional>true</optional></dependency>
         <dependency><groupId>org.apache.commons</groupId><artifactId>commons-lang3</artifactId></dependency>
+        <!-- P8-8.16: 健康检查端点 -->
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-actuator</artifactId></dependency>
     </dependencies>
     <build><finalName>receiver</finalName></build>
 </project>

@@ -33,3 +33,16 @@ detector:
 logging:
   level:
     com.etas.vaas.detector4motion: debug
+
+# P8-8.16: Actuator 健康检查
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+  info:
+    env:
+      enabled: true

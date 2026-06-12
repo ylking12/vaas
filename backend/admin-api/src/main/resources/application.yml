@@ -20,3 +20,16 @@ logging:
 
 # UserService config
 password-path: ./config/password.txt
+
+# P8-8.16: Actuator 健康检查
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+  info:
+    env:
+      enabled: true
