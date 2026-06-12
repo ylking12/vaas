@@ -4,9 +4,15 @@
 #   git config core.hooksPath .githooks
 #
 # 检查规则（仅警告，不阻止提交）:
-#   1. 改了 frontend/ 或 backend/ 源码但没改 TASK_TRACKING.md
-#   2. 改了 scripts/ 但没改 README.md 脚本章节
-#   3. 改了 docs/plans/ 但没在 TASK_TRACKING.md 引用
+#   1. 改 frontend/ 或 backend/ 源码但没改 TASK_TRACKING.md
+#   2. 改 scripts/ 但没改 README.md 脚本章节
+#   3. 新增 docs/plans/ 但没在 TASK_TRACKING.md 引用
+#   4. 改 PROJECT_RULES.md / CLAUDE.md → 提醒确认影响范围
+#   5. 改 backend/**/controller/ → 提醒同步 PROJECT_RULES.md §〇.6 API
+#   6. 改 backend/*/pom.xml 端口 → 提醒同步 PROJECT_RULES.md + README.md 端口表
+#   7. frontend 目录结构变化 → 提醒同步 PROJECT_RULES.md §〇.5
+#   8. 新增/删除微服务 → 提醒同步 PROJECT_RULES.md + README.md
+#   9. 改 application.yml（端口/服务名） → 提醒同步 PROJECT_RULES.md
 
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
@@ -23,39 +29,88 @@ fi
 
 WARNINGS=0
 
-# 规则 1: 改源码 → TASK_TRACKING.md 也应改
+# ---------- 规则 1: 改源码 → TASK_TRACKING.md 也应改 ----------
 SRC_CHANGED=$(echo "$CHANGED" | grep -E "^(frontend/dashboard/src/|backend/[^/]+/src/)" || true)
 TRACKING_CHANGED=$(echo "$CHANGED" | grep -E "^TASK_TRACKING\.md$" || true)
 if [ -n "$SRC_CHANGED" ] && [ -z "$TRACKING_CHANGED" ]; then
-  warn "检测到源码改动但未同步 TASK_TRACKING.md"
+  warn "规则 1: 检测到源码改动但未同步 TASK_TRACKING.md"
   warn "  改动: $(echo "$SRC_CHANGED" | head -3 | tr '\n' ' ')"
   warn "  建议: 在 TASK_TRACKING.md 中记录本次变更（项目规则强制要求）"
   WARNINGS=$((WARNINGS+1))
 fi
 
-# 规则 2: 改 scripts/ → README.md 脚本章节也应改
+# ---------- 规则 2: 改 scripts/ → README.md 脚本章节也应改 ----------
 SCRIPTS_CHANGED=$(echo "$CHANGED" | grep -E "^scripts/.*\.sh$" || true)
 README_CHANGED=$(echo "$CHANGED" | grep -E "^README\.md$" || true)
 if [ -n "$SCRIPTS_CHANGED" ] && [ -z "$README_CHANGED" ]; then
-  warn "检测到 scripts/ 改动但未同步 README.md"
+  warn "规则 2: 检测到 scripts/ 改动但未同步 README.md"
   warn "  改动: $(echo "$SCRIPTS_CHANGED" | tr '\n' ' ')"
   warn "  建议: 在 README.md「脚本工具」章节补充新脚本说明"
   WARNINGS=$((WARNINGS+1))
 fi
 
-# 规则 3: 新增 docs/plans/ 文件 → TASK_TRACKING.md 应有引用
+# ---------- 规则 3: 新增 docs/plans/ 文件 → TASK_TRACKING.md 应有引用 ----------
 NEW_PLANS=$(echo "$CHANGED" | grep -E "^docs/plans/.*\.md$" || true)
 if [ -n "$NEW_PLANS" ] && [ -z "$TRACKING_CHANGED" ]; then
-  warn "检测到 docs/plans/ 新增文档但未在 TASK_TRACKING.md 引用"
+  warn "规则 3: 检测到 docs/plans/ 新增文档但未在 TASK_TRACKING.md 引用"
   warn "  改动: $(echo "$NEW_PLANS" | tr '\n' ' ')"
   WARNINGS=$((WARNINGS+1))
 fi
 
-# 规则 4: 改了 PROJECT_RULES.md / CLAUDE.md → 提醒确认影响范围
+# ---------- 规则 4: 改 PROJECT_RULES.md / CLAUDE.md → 提醒确认影响范围 ----------
 RULES_CHANGED=$(echo "$CHANGED" | grep -E "^(PROJECT_RULES|CLAUDE)\.md$" || true)
 if [ -n "$RULES_CHANGED" ]; then
-  warn "项目规则文件变更：$(echo "$RULES_CHANGED" | tr '\n' ' ')"
+  warn "规则 4: 项目规则文件变更：$(echo "$RULES_CHANGED" | tr '\n' ' ')"
   warn "  请确认团队成员已同步新规则"
+  WARNINGS=$((WARNINGS+1))
+fi
+
+# ---------- 规则 5: 改 controller → 提醒同步 PROJECT_RULES.md §〇.6 API 接口 ----------
+CONTROLLER_CHANGED=$(echo "$CHANGED" | grep -E "backend/[^/]+/src/main/java/.*[Cc]ontroller" || true)
+PROJECT_RULES_CHANGED=$(echo "$CHANGED" | grep -E "^PROJECT_RULES\.md$" || true)
+if [ -n "$CONTROLLER_CHANGED" ] && [ -z "$PROJECT_RULES_CHANGED" ]; then
+  warn "规则 5: 检测到后端 Controller 改动 → API 接口可能变化"
+  warn "  改动: $(echo "$CONTROLLER_CHANGED" | head -3 | tr '\n' ' ')"
+  warn "  建议: 审计 PROJECT_RULES.md §〇.6 关键 API 接口、README.md 大屏服务端口"
+  WARNINGS=$((WARNINGS+1))
+fi
+
+# ---------- 规则 6: 改 pom.xml → 提醒同步端口表 ----------
+POM_CHANGED=$(echo "$CHANGED" | grep -E "^backend/[^/]+/pom\.xml$" || true)
+if [ -n "$POM_CHANGED" ] && [ -z "$PROJECT_RULES_CHANGED" ] && [ -z "$README_CHANGED" ]; then
+  warn "规则 6: 检测到 pom.xml 改动 → 服务端口可能变化"
+  warn "  改动: $(echo "$POM_CHANGED" | tr '\n' ' ')"
+  warn "  建议: 审计 PROJECT_RULES.md §〇.2 系统架构 + README.md 服务端口表"
+  WARNINGS=$((WARNINGS+1))
+fi
+
+# ---------- 规则 7: frontend 目录结构变化 → 提醒 PROJECT_RULES.md §〇.5 ----------
+# 检测 frontend/dashboard/src/ 下新增/删除目录
+FRONTEND_DIR_CHANGED=$(echo "$CHANGED" | grep -E "^frontend/dashboard/src/" | awk -F/ '{print $4}' | sort -u || true)
+if [ -n "$FRONTEND_DIR_CHANGED" ] && [ -z "$PROJECT_RULES_CHANGED" ]; then
+  warn "规则 7: 检测到 frontend 目录结构变化（子目录: $(echo $FRONTEND_DIR_CHANGED | tr '\n' ' '))"
+  warn "  建议: 审计 PROJECT_RULES.md §〇.5 项目材料文档清单 + §〇.7 管理后台页面结构"
+  WARNINGS=$((WARNINGS+1))
+fi
+
+# ---------- 规则 8: 新增/删除微服务（backend/<name>/ 目录变化） ----------
+# 排除 backend/pom.xml（父项目）和 vaas-common（公共库）
+NEW_SERVICE=$(git diff --cached --name-only --diff-filter=A | grep -E "^backend/[^/]+/" | awk -F/ '{print $2}' | sort -u | grep -vE "^(backend|vaas-common)$" || true)
+DELETED_SERVICE=$(git diff --cached --name-only --diff-filter=D | grep -E "^backend/[^/]+/" | awk -F/ '{print $2}' | sort -u | grep -vE "^(backend|vaas-common)$" || true)
+if [ -n "$NEW_SERVICE" ] || [ -n "$DELETED_SERVICE" ]; then
+  warn "规则 8: 检测到微服务目录增删"
+  [ -n "$NEW_SERVICE" ] && warn "  新增: $NEW_SERVICE"
+  [ -n "$DELETED_SERVICE" ] && warn "  删除: $DELETED_SERVICE"
+  warn "  建议: 同步 PROJECT_RULES.md §〇.2 + §〇.5 + README.md 端口表 + 大屏架构图"
+  WARNINGS=$((WARNINGS+1))
+fi
+
+# ---------- 规则 9: 改 application.yml（端口/服务名） → 提醒 PROJECT_RULES.md ----------
+YML_CHANGED=$(echo "$CHANGED" | grep -E "^backend/[^/]+/src/main/resources/application\.(yml|yaml|properties)$" || true)
+if [ -n "$YML_CHANGED" ] && [ -z "$PROJECT_RULES_CHANGED" ] && [ -z "$README_CHANGED" ]; then
+  warn "规则 9: 检测到 application.yml 改动 → 配置可能影响端口/服务名"
+  warn "  改动: $(echo "$YML_CHANGED" | tr '\n' ' ')"
+  warn "  建议: 审计 PROJECT_RULES.md §〇.2 + README.md 服务端口表"
   WARNINGS=$((WARNINGS+1))
 fi
 

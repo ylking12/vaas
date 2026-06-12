@@ -407,6 +407,55 @@ git config core.hooksPath .githooks
 
 ---
 
+## Phase 完成审计清单（P8 新增）
+
+> **强制执行**：每个 Phase 标记为 100% 完成前，必须完成以下审计。任何一项"否"都需要修复后才能标完成。
+
+```
+Phase {N} 完成审计
+├── [ ] PROJECT_RULES.md 准确性
+│     ├── §〇.2 系统架构：服务列表、端口、依赖关系与代码一致？
+│     ├── §〇.5 文档清单：目录结构与实际文件一致？
+│     ├── §〇.6 API 接口：Controller 改动已反映？
+│     └── §〇.7 管理后台页面：前端结构变化已反映？
+├── [ ] README.md 准确性
+│     ├── 服务端口表与 pom.xml 一致？
+│     ├── 脚本工具章节覆盖所有 scripts/ 下的脚本？
+│     └── 系统架构图 Mermaid 与实际数据流一致？
+├── [ ] CLAUDE.md 规则合理性
+│     ├── 强制操作步骤是否需要更新？
+│     ├── 复现原则是否仍适用？
+│     └── 与 PROJECT_RULES.md 是否仍互补不重叠？
+├── [ ] CHANGELOG.md 已更新
+│     └── 本 Phase 的关键改动已记录在 Unreleased 或新版本号？
+├── [ ] pre-commit hook 规则覆盖
+│     └── 本 Phase 涉及的改动类型都有对应 hook 规则？
+└── [ ] 文档 vs 代码一致性（自动检查项）
+      ├── backend/*/src/main/java/*Controller.java 改动 → PROJECT_RULES §〇.6
+      ├── backend/*/pom.xml 改动 → 端口表（PROJECT_RULES + README）
+      ├── backend/*/application.yml 改动 → 端口表
+      ├── frontend/dashboard/src/ 目录变化 → PROJECT_RULES §〇.5
+      └── backend/{新服务名}/ 增删 → 架构图 + 端口表
+```
+
+### pre-commit hook 当前规则（9 条）
+
+| # | 触发 | 提醒文档 | 章节 |
+|---|------|---------|------|
+| 1 | frontend/dashboard/src/ 或 backend/*/src/ 改动 | TASK_TRACKING.md | 进度概要 |
+| 2 | scripts/*.sh 改动 | README.md | 脚本工具 |
+| 3 | docs/plans/ 新增 | TASK_TRACKING.md | 引用 |
+| 4 | PROJECT_RULES.md / CLAUDE.md 改动 | 团队同步 | - |
+| 5 | backend/**/controller/ 改动 | PROJECT_RULES.md | §〇.6 API |
+| 6 | backend/*/pom.xml 改动 | PROJECT_RULES.md + README.md | §〇.2 + 端口表 |
+| 7 | frontend/dashboard/src/ 目录结构变化 | PROJECT_RULES.md | §〇.5 + §〇.7 |
+| 8 | backend/{service}/ 增删 | PROJECT_RULES.md + README.md | 架构图 + 端口表 |
+| 9 | backend/*/application.yml 改动 | PROJECT_RULES.md + README.md | §〇.2 + 端口表 |
+
+**审计机制**：当 P{N} 标完成时，AI 必须**逐项对照**此清单并报告结果。如发现不一致，必须先修复文档再标完成。
+
+---
+
 ## P7 修复记录 (2026-06-12)
 
 ```
