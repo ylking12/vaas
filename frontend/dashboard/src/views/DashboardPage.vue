@@ -35,9 +35,22 @@
       </div>
       <MapView ref="mapViewRef" @map-ready="onMapReady" @vehicle-click="onVehicleClick" @event-click="onEventClick" @station-click="onStationClick" />
       <div class="time-slider">
-        <span>过去23h</span>
-        <el-slider v-model="sliderValue" :min="1" :max="25" :step="1" :marks="sliderMarks" />
-        <span>未来1h</span>
+        <!-- P7+ 时间轴：参照原版 11-timeline.png + 设计文档 §3.4
+             - 外层黑底圆角浮层（原版有）+ 70% 宽 + 居中 + 距底 5%
+             - 两端 "过去23h" / "未来1h" 文字（原版有）
+             - 24 段色块跑道（每段 1 小时）
+             - 真实小时刻度（16:00, 17:00, ..., Now, ..., 13:00）
+             - 默认 Now 位置（sliderValue=24） -->
+        <p class="time-prefix">过去23h</p>
+        <el-slider
+          v-model="sliderValue"
+          :min="1" :max="25" :step="1"
+          show-stops
+          :marks="sliderMarks"
+          :input-style="{ color: '#fff6da', fontFamily: 'Noto Sans SC', fontWeight: '100' }"
+          tooltip-class="time-tooltip"
+        />
+        <p class="time-suffix">未来1h</p>
       </div>
     </div>
     <el-drawer v-model="drawerVisible" direction="ltr" size="100%" title="实时数据">
@@ -137,7 +150,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useDashboardStore } from '../stores/dashboard'
 import * as api from '../api'
 import MapView from '../components/MapView.vue'
@@ -149,7 +162,8 @@ import * as XLSX from 'xlsx'
 const store = useDashboardStore()
 const drawerVisible = ref(false)
 const panelExpanded = ref(false)
-const sliderValue = ref(13)
+// P7+ 时间轴：默认 Now 位置（24=现在），原版也是 Now 在中部偏右
+const sliderValue = ref(24)
 const sensorId = ref(1)
 const chartType = ref('airTemperature')
 const chartData = ref([])
@@ -181,9 +195,24 @@ const sensors = [
   { key: 5, name: '运河西路' }
 ]
 
-const sliderMarks = {
-  1: '1h', 13: 'Now', 25: '未来1h'
-}
+// P7+ 时间轴：参照原版 11-timeline.png 的真实小时刻度（HH:00 格式）
+// 过去 23h ~ 未来 1h：以当前小时为基准，滑动到对应位置时显示真实小时
+//   value 1..23 → 过去 (currentHour-23)..(currentHour-1) 的 HH:00
+//   value 24     → Now
+//   value 25     → (currentHour+1) 的 HH:00
+const sliderMarks = computed(() => {
+  const m = {}
+  const now = new Date()
+  const h = now.getHours()
+  const fmt = (n) => String(n).padStart(2, '0')
+  for (let i = 1; i <= 23; i++) {
+    const past = (h - 24 + i + 24) % 24
+    m[i] = `${fmt(past)}:00`
+  }
+  m[24] = 'Now'
+  m[25] = `${fmt((h + 1) % 24)}:00`
+  return m
+})
 
 // 时间轴联动：拖动时刷新数据
 watch(sliderValue, (newVal) => {
@@ -360,13 +389,22 @@ async function loadMapEvents() {
   const mv = mapViewRef.value
   if (!mv) return
   try {
-    const [bump, slip] = await Promise.all([
+    // P9-修复: 补全 5 种事件类型（与原大屏一致）
+    // 原大屏: 颠簸/湿滑/积水/结冰/低附着
+    // P7 重写版: 之前只支持 bump/slip，现补全 ponding/ice/low-attachment
+    const [bump, slip, ponding, ice, lowAttach] = await Promise.all([
       api.getLast24hEvent('bump').catch(() => []),
-      api.getLast24hEvent('slip').catch(() => [])
+      api.getLast24hEvent('slip').catch(() => []),
+      api.getLast24hEvent('ponding').catch(() => []),
+      api.getLast24hEvent('ice').catch(() => []),
+      api.getLast24hEvent('low-attachment').catch(() => [])
     ])
     const events = [
       ...(Array.isArray(bump) ? bump.map(e => ({ ...e, eventType: 'bump' })) : []),
-      ...(Array.isArray(slip) ? slip.map(e => ({ ...e, eventType: 'slip' })) : [])
+      ...(Array.isArray(slip) ? slip.map(e => ({ ...e, eventType: 'slip' })) : []),
+      ...(Array.isArray(ponding) ? ponding.map(e => ({ ...e, eventType: 'ponding' })) : []),
+      ...(Array.isArray(ice) ? ice.map(e => ({ ...e, eventType: 'ice' })) : []),
+      ...(Array.isArray(lowAttach) ? lowAttach.map(e => ({ ...e, eventType: 'low-attachment' })) : [])
     ]
     if (events.length) mv.addEventMarkers(events)
   } catch {}
@@ -423,9 +461,72 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; font-family: 'No
 .panel-content { width: 245px; padding: 12px; color: #c0d0e0; font-size: 13px; }
 .panel-section { margin-bottom: 20px; }
 .panel-section h4 { font-size: 14px; color: #FFF6DA; margin-bottom: 8px; border-bottom: 1px solid rgba(255,246,218,0.2); padding-bottom: 4px; }
-.time-slider { position: absolute; bottom: 0; left: 0; right: 0; height: 54px; background: #000; display: flex; align-items: center; padding: 0 24px; gap: 16px; z-index: 5; color: #c0d0e0; }
-.time-slider .el-slider { flex: 1; }
-.drawer-grid { display: flex; gap: 16px; height: 100%; background: #1a1a1a; color: #FFF6DA; }
+/* P7+ 时间轴：参照原版 11-timeline.png + 设计文档 §3.4
+   - 外层黑底圆角浮层（原版有）+ 70% 宽 + 居中 + 距底 5%
+   - 两端 "过去23h" / "未来1h" 文字（原版有）
+   - 跑道：6 色全光谱渐变（品红→紫→蓝→天蓝→青绿→嫩绿）
+   - 24 段 stop 形成视觉分割
+   - 滑块：白色圆角胶囊 + 中心三条垂直细线（防滑纹路） */
+/* .time 容器：黑底外框 + 圆角 + 70% 宽 + 居中 + 距底 5%（原版结构） */
+.time-slider {
+  position: absolute;
+  bottom: 5%; left: 50%; transform: translateX(-50%);
+  display: flex; width: 70%; height: 8%; min-height: 48px;
+  align-items: center; padding: 0 16px;
+  background: #000;
+  border-radius: 4px;
+  font-family: 'Noto Sans SC', sans-serif; color: #fff6da; font-weight: 100; z-index: 999;
+}
+/* 端点文字 */
+.time-prefix, .time-suffix {
+  font-size: 12px; color: #fff6da;
+  text-align: center; flex-shrink: 0;
+  padding: 0 8px; margin: 0;
+  white-space: nowrap;
+}
+
+/* el-slider 占满中间 */
+.time-slider .el-slider { flex: 1; min-width: 0; padding: 0 8px; }
+
+/* 跑道：6 色全光谱渐变（参考原版 11-timeline.png） */
+.time-slider .el-slider__runway { height: 14px; background-image: linear-gradient(90deg, #c6077a 0%, #7e05d1 25%, #0c87f1 50%, #00d4e0 70%, #75df0a 85%, #b5e84a 100%); border-radius: 3px; }
+.time-slider .el-slider__bar { height: 14px; background-color: rgba(64, 158, 255, 0); border-radius: 3px; }
+.time-slider .el-slider__runway .el-slider__stop { height: 100%; background-color: #fff6da; border-radius: 0; }
+/* marks 文字（HH:00 真实小时）— 位于跑道下方（Element Plus 默认 15px）
+   黑底外框已提供足够对比度，不再需要 text-shadow */
+.time-slider .el-slider__runway .el-slider__marks-text {
+  font-size: 11.66px; margin-top: 15px;
+  font-family: 'Noto Sans SC', sans-serif; color: #fff6da;
+}
+/* 滑块按钮：白色圆角胶囊 + 中心三条垂直细线（防滑纹路，原版视觉特征） */
+.time-slider .el-slider__runway .el-slider__button-wrapper { width: 26px; height: 30px; top: -10px; }
+.time-slider .el-slider__runway .el-slider__button-wrapper .el-slider__button {
+  width: 100%; height: 100%;
+  background: #fff;          /* 白色底 */
+  border: 0; border-radius: 8px;  /* 圆角胶囊 */
+  position: relative;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+}
+/* 中心三条垂直细线（防滑纹路，原版视觉特征：等距 3 条细灰线） */
+.time-slider .el-slider__runway .el-slider__button::before {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px; height: 14px;
+  /* 三条 1px 宽的灰色竖线，等间距 */
+  background: linear-gradient(to right,
+    #888 0px, #888 1px,
+    transparent 1px, transparent 5px,
+    #888 5px, #888 6px,
+    transparent 6px, transparent 10px,
+    #888 10px, #888 11px,
+    transparent 11px, transparent 12px);
+}
+.time-slider .el-slider__runway .el-slider__button::after { display: none; }
+/* tooltip 样式 */
+.time-tooltip { font-weight: 700; }
+.drawer-grid { display: flex; gap: 16px; height: 100%; background: #090909; color: #FFF6DA; }
 .drawer-left { width: 240px; overflow-y: auto; padding: 8px; }
 .drawer-center { flex: 1; overflow-y: auto; padding: 8px; }
 .drawer-right { width: 260px; overflow-y: auto; padding: 8px; }
@@ -439,13 +540,13 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; font-family: 'No
 .stat-number { font-size: 22px; font-weight: bold; color: #FFF6DA; }
 .stat-weather { font-size: 24px; margin: 8px 0; color: #FFF6DA; }
 /* Drawer dark theme overrides - Brown/Gold scheme */
-.el-drawer { background: #1a1a1a !important; }
+.el-drawer { background: #090909 !important; }
 .el-drawer__header { color: #FFF6DA !important; }
 .el-table { background: transparent !important; color: #FFF6DA !important; }
 .el-table th.el-table__cell { background: rgba(50,40,30,0.8) !important; color: #FFF6DA !important; }
 .el-table td.el-table__cell { background: transparent !important; color: #FFF6DA !important; }
 .el-table--striped .el-table__body tr.el-table__row--striped td { background: rgba(255,246,218,0.03) !important; }
-.el-select-dropdown { background: #1a1a1a !important; border: 1px solid rgba(255,246,218,0.2) !important; }
+.el-select-dropdown { background: #090909 !important; border: 1px solid rgba(255,246,218,0.2) !important; }
 .el-select-dropdown__item { color: #FFF6DA !important; }
 .el-select-dropdown__item.hover { background: rgba(255,246,218,0.1) !important; }
 .el-button--primary { background: linear-gradient(90deg, #32281e, #FFF6DA) !important; border-color: #FFF6DA !important; color: #000 !important; }

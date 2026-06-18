@@ -255,3 +255,51 @@
 - ✅ LESSONS_LEARNED.md 只记已发生的问题复盘（已发生的事情）
 - ✅ TASK_TRACKING.md 顶部维护进度概要统计表
 
+---
+
+## 五、大屏复原基线（回归测试依据）
+
+> **位置**：[docs/dashboard-baseline/](docs/dashboard-baseline/)
+> **状态**：2026-06-18 完成首次基线固化
+
+### 5.1 用途
+
+- 原大屏（`https://vaas.wx-iov.com:444/#/dashboard`）的**功能/视觉/交互基线**
+- P7 重写版（`http://localhost:8083`）的**同步基线**
+- 后续大屏改动 → **回归测试依据**
+
+### 5.2 何时重跑
+
+| 触发场景 | 命令 |
+|---------|------|
+| 大屏组件代码改动 | `cd docs/dashboard-baseline && NODE_PATH=/opt/homebrew/lib/node_modules node p7-baseline-capture.js` |
+| 大屏样式调整 | 同上 |
+| 后端 API 路径/字段变更 | 同上 + 重跑原大屏 `baseline-capture-v2.js` |
+| 主题色/视觉规范调整 | 对比 `screenshots-summary.md` |
+
+### 5.3 关键产物
+
+| 文件 | 用途 |
+|------|------|
+| `VERIFICATION_REPORT.md` | 验证报告（11 项功能对齐 + 1 项 P0 修复）|
+| `full-ui-inventory.md` | 完整 UI 元素清单 |
+| `api-fields.md` | 13 个 API 字段定义 |
+| `design-tokens.md` | 视觉规范（颜色/字体/间距）|
+| `screenshots-summary.md` | 7 张原大屏截图 + 主题分析 |
+| `p7-baseline/diff-report-v2.md` | P7 vs 原大屏差异 |
+| `baseline-capture-v2.js` / `p7-baseline-capture.js` | 探测脚本（可重跑）|
+
+### 5.4 已修复的差异（避免回退）
+
+| 修复点 | 文件 | 行 |
+|--------|------|---|
+| 5 种 24h 事件补全（bump/slip/ponding/ice/low-attachment）| `frontend/dashboard/src/views/DashboardPage.vue` | `loadMapEvents()` |
+| Drawer 主题色 #1A1A1A → #090909 | 同上 + `components/Popup.vue` | `.drawer-grid` / `.el-drawer` / `.el-select-dropdown` |
+
+### 5.5 探测脚本经验（避免再次踩坑）
+
+- ⏰ **必须等 drawer 展开**：点击"实时数据"后等 **5 秒**（动画 + ECharts 异步加载）
+- 🌲 **必须用 TreeWalker 抓 drawer 内部**：drawer 渲染在 portal
+- 📊 **不能凭文件大小判断页面已展开**（drawer 后页面反而变小）
+- 🎨 **canvas/SVG 元素探测**：要单独分类（amap / echarts / 原生 canvas）
+

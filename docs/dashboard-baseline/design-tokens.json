@@ -1,0 +1,72 @@
+{
+  "rootVars": {
+    "--fa-style-family-brands": "'Font Awesome 6 Brands'",
+    "--fa-style-family-classic": "'Font Awesome 6 Free'",
+    "--fa-font-solid": "normal 900 1em/1 'Font Awesome 6 Free'",
+    "--fa-font-regular": "normal 400 1em/1 'Font Awesome 6 Free'",
+    "--fa-font-brands": "normal 400 1em/1 'Font Awesome 6 Brands'"
+  },
+  "body": {
+    "font": "12px / 13.8px \"Noto Sans SC\"",
+    "fontSize": "12px",
+    "fontFamily": "\"Noto Sans SC\"",
+    "fontWeight": "400",
+    "color": "rgb(0, 0, 0)",
+    "background": "rgba(0, 0, 0, 0)",
+    "lineHeight": "13.8px",
+    "letterSpacing": "normal"
+  },
+  "h1": {
+    "font": "500 19.2px / 22.08px \"Noto Sans SC\"",
+    "fontSize": "19.2px",
+    "fontFamily": "\"Noto Sans SC\"",
+    "fontWeight": "500",
+    "color": "rgb(255, 255, 255)",
+    "background": "rgba(0, 0, 0, 0)",
+    "lineHeight": "22.08px",
+    "letterSpacing": "normal"
+  },
+  "h3": {
+    "font": "700 22.8px / 26.22px \"Noto Sans SC\"",
+    "fontSize": "22.8px",
+    "fontFamily": "\"Noto Sans SC\"",
+    "fontWeight": "700",
+    "color": "rgb(255, 246, 218)",
+    "background": "rgba(0, 0, 0, 0)",
+    "lineHeight": "26.22px",
+    "letterSpacing": "normal"
+  },
+  "button": {
+    "font": "19.2px / 22.08px \"Noto Sans SC\"",
+    "fontSize": "19.2px",
+    "fontFamily": "\"Noto Sans SC\"",
+    "fontWeight": "400",
+    "color": "rgb(255, 255, 255)",
+    "background": "rgb(85, 85, 85)",
+    "lineHeight": "22.08px",
+    "letterSpacing": "normal"
+  },
+  "panel": {
+    "panel-0": {
+      "class": "left-panel",
+      "background": "rgba(0, 0, 0, 0)",
+      "border": "0px none rgb(0, 0, 0)",
+      "borderRadius": "0px",
+      "padding": "0px"
+    },
+    "panel-1": {
+      "class": "panel-btn dis ani",
+      "background": "rgb(0, 0, 0)",
+      "border": "0px none rgb(255, 246, 218)",
+      "borderRadius": "0px 15.001px 0px 0px",
+      "padding": "20.0006px 13.3325px"
+    },
+    "panel-2": {
+      "class": "section panel-in-ani",
+      "background": "rgba(0, 0, 0, 0.6)",
+      "border": "0px none rgb(0, 0, 0)",
+      "borderRadius": "0px",
+      "padding": "0px"
+    }
+  }
+}

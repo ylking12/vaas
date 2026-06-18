@@ -1,0 +1,15 @@
+{
+  "rootVars": {},
+  "body": {
+    "font": "16px Times",
+    "fontSize": "16px",
+    "fontFamily": "Times",
+    "fontWeight": "400",
+    "color": "rgb(0, 0, 0)",
+    "background": "rgba(0, 0, 0, 0)"
+  },
+  "h1": {},
+  "h3": {},
+  "button": {},
+  "panel": {}
+}

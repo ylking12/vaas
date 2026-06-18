@@ -488,6 +488,96 @@ Redis模式: receiver/vaas-backend/detector4kt/admin-api 使用单机；detector
 
 ---
 
+## 四.5、大屏复原基线（回归测试依据）
+
+> **位置**：[docs/dashboard-baseline/](docs/dashboard-baseline/)
+> **首版时间**：2026-06-18（11 项核心功能对齐 + 1 项 P0 修复）
+> **目的**：作为后续大屏改动的回归测试基线，避免功能回退
+
+### 4.5.1 何时重跑基线
+
+| 触发场景 | 重跑命令 |
+|---------|---------|
+| 大屏组件代码改动 | `cd docs/dashboard-baseline && NODE_PATH=/opt/homebrew/lib/node_modules node p7-baseline-capture.js` |
+| 大屏样式调整 | 同上（重点对比 `screenshots-analysis.json` 主色）|
+| 后端 API 路径/字段变更 | 重跑原大屏 + P7 baseline，对比 `api-fields.md` |
+| 主题色/视觉规范调整 | 对比 `screenshots-summary.md` + `design-tokens.md` |
+| 完整回归 | 跑原大屏 + P7 baseline + 写新 diff 报告 |
+
+### 4.5.2 关键产物
+
+| 文件 | 用途 |
+|------|------|
+| `VERIFICATION_REPORT.md` | ⭐ 验证报告（功能对齐 + P0 修复记录）|
+| `full-ui-inventory.md` | 完整 UI 元素清单（面板/标题/API）|
+| `api-fields.md` | 13 个 API 字段定义 |
+| `design-tokens.md` | 视觉规范（颜色/字体/间距）|
+| `screenshots-summary.md` | 7 张原大屏截图 + 主题分析 |
+| `interaction-state-machine.md` | 交互状态机图 |
+| `p7-baseline/diff-report-v2.md` | P7 vs 原大屏差异（已修复后）|
+| `baseline-capture-v2.js` | 原大屏深度探测脚本（可重跑）|
+| `p7-baseline/p7-baseline-capture.js` | P7 同步探测脚本（可重跑）|
+
+### 4.5.3 核心 API 清单（与原大屏对齐的 13 个端点）
+
+| API | 用途 |
+|-----|------|
+| `/spring/v1/get-alarm-list` | 告警列表 |
+| `/spring/v1/get-event-summary` | 事件汇总 |
+| `/spring/v1/get_real_time_sensor_data` | 实时传感器 |
+| `/spring/v1/get_last24h_data_plot` | 24h 数据图 |
+| `/spring/v1/get_covered_range` | 覆盖范围 |
+| `/spring/v1/get_weather` | 天气 |
+| `/spring/v1/get-rain-points` | 雨点 |
+| `/spring/v1/location` | 车辆位置 |
+| `/spring/v1/get-last-24h-bump-event` | 24h 颠簸 |
+| `/spring/v1/get-last-24h-slip-event` | 24h 湿滑 |
+| `/spring/v1/get-last-24h-ponding-event` | 24h 积水 |
+| `/spring/v1/get-last-24h-ice-event` | 24h 结冰 |
+| `/spring/v1/get-last-24h-low-attachment-event` | 24h 低附着 |
+
+### 4.5.4 已修复的差异（避免回退）
+
+| 修复点 | 文件位置 | 说明 |
+|--------|---------|------|
+| **5 种 24h 事件补全** | `frontend/dashboard/src/views/DashboardPage.vue` 的 `loadMapEvents()` | 补全 ponding/ice/low-attachment，原只支持 bump/slip |
+| **Drawer 主题色** `#1A1A1A` → `#090909` | 同上 `.drawer-grid` / `.el-drawer` / `.el-select-dropdown` | 与原大屏 #090909 对齐 |
+| **Popup 背景色** `#1A1A1A` → `#090909` | `frontend/dashboard/src/components/Popup.vue` | 弹窗背景对齐 |
+
+### 4.5.5 5 个气象站下拉（必须保持完整）
+
+```
+[
+  { key: 1, name: '文惠路与锦绣路' },
+  { key: 2, name: '先锋中路与新锡路' },
+  { key: 3, name: '机场路-泰山路' },
+  { key: 4, name: '高浪路-兴梁道' },
+  { key: 5, name: '运河西路' }
+]
+```
+
+### 4.5.6 探测脚本经验（避免再次踩坑）
+
+> ⚠️ **关键经验**：探测 P7 大屏时**不能**只跑一次默认状态，必须按以下步骤：
+
+1. ⏰ **必须等 drawer 展开**：点击"实时数据"后等 **5 秒**（drawer 有打开动画 + ECharts 异步加载）
+2. 🌲 **必须抓 drawer 内部 DOM**：用 `document.querySelector('.el-drawer').querySelectorAll('*')`，不能只靠 `document.body` 的 TreeWalker（drawer 渲染在 portal）
+3. 📊 **不能凭文件大小判断页面已展开**（drawer 后页面反而变小，因为地图被遮挡）
+4. 🎨 **canvas/SVG 元素单独分类**（amap / echarts / 原生 canvas 各算一类）
+5. 📋 **把 drawer 元素合并到 all-texts.json**（否则 drawer 内容永远看不到）
+
+### 4.5.7 重跑检查清单
+
+- [ ] 启动 5 个后端服务（receiver / vaas-backend / detector4kt / detector4motion / admin-api）
+- [ ] 启动 P7 Vite dev server（默认 8083）
+- [ ] 确认端口 50410/50412/50413/50414/50415 + 8083 都在 LISTEN
+- [ ] 跑 `p7-baseline-capture.js`（约 3 分钟）
+- [ ] 对比 `p7-baseline/api-responses.json` 上一版（应 ≥ 13 个端点）
+- [ ] 对比 `p7-baseline/screenshots/` 主色（应与 baseline 主色一致）
+- [ ] 如有差异，写新 diff 报告到 `p7-baseline/diff-report-v3.md`
+
+---
+
 ## 五、参考文档映射
 
 | 设计文档 | 对应模块 | 关键作用 |

@@ -1,0 +1,97 @@
+[
+  {
+    "tag": "H6",
+    "class": "",
+    "text": "文惠路与锦绣路"
+  },
+  {
+    "tag": "H6",
+    "class": "",
+    "text": "先锋中路与新锡路"
+  },
+  {
+    "tag": "H6",
+    "class": "",
+    "text": "机场路-泰山路"
+  },
+  {
+    "tag": "H6",
+    "class": "",
+    "text": "高浪路-兴梁道"
+  },
+  {
+    "tag": "H6",
+    "class": "",
+    "text": "运河西路"
+  },
+  {
+    "tag": "H6",
+    "class": "",
+    "text": "附着系数"
+  },
+  {
+    "tag": "H6",
+    "class": "",
+    "text": "路面温度"
+  },
+  {
+    "tag": "H6",
+    "class": "",
+    "text": "干湿状态"
+  },
+  {
+    "tag": "H3",
+    "class": "",
+    "text": "实时车队数据"
+  },
+  {
+    "tag": "H3",
+    "class": "",
+    "text": "路网状态"
+  },
+  {
+    "tag": "H3",
+    "class": "",
+    "text": "实时气象数据"
+  },
+  {
+    "tag": "DIV",
+    "class": "title",
+    "text": "历史24小时路面状态"
+  },
+  {
+    "tag": "DIV",
+    "class": "condition-title",
+    "text": "道路实时路况"
+  },
+  {
+    "tag": "H6",
+    "class": "",
+    "text": "空气温度"
+  },
+  {
+    "tag": "H6",
+    "class": "",
+    "text": "路面温度"
+  },
+  {
+    "tag": "H6",
+    "class": "",
+    "text": "相对湿度"
+  },
+  {
+    "tag": "DIV",
+    "class": "title",
+    "text": "告警视图列表 导出"
+  },
+  {
+    "tag": "UL",
+    "class": "list-title",
+    "text": "路名告警源告警类型时间"
+  },
+  {
+    "tag": "DIV",
+    "class": "title",
+    "text": "服务统计数据"
+  }
+]

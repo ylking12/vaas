@@ -1,0 +1,101 @@
+[
+  {
+    "type": "interactive",
+    "tag": "DIV",
+    "role": "",
+    "class": "el-slider__button-wrapper",
+    "text": "",
+    "title": "",
+    "x": 1469,
+    "y": 970,
+    "w": 17,
+    "h": 36
+  },
+  {
+    "type": "interactive",
+    "tag": "DIV",
+    "role": "",
+    "class": "el-tooltip el-slider__button",
+    "text": "",
+    "title": "",
+    "x": 1469,
+    "y": 970,
+    "w": 17,
+    "h": 36
+  },
+  {
+    "type": "interactive",
+    "tag": "DIV",
+    "role": "",
+    "class": "amap-maps",
+    "text": "",
+    "title": "",
+    "x": 0,
+    "y": 4,
+    "w": 1920,
+    "h": 1076
+  },
+  {
+    "type": "canvas",
+    "index": 0,
+    "class": "amap-layer",
+    "w": 0,
+    "h": 0,
+    "x": 0,
+    "y": 14
+  },
+  {
+    "type": "amap",
+    "class": "map-container amap-container",
+    "w": 1920,
+    "h": 1076
+  },
+  {
+    "type": "amap",
+    "class": "amap-maps",
+    "w": 1920,
+    "h": 1076
+  },
+  {
+    "type": "amap",
+    "class": "amap-layers",
+    "w": 1920,
+    "h": 1076
+  },
+  {
+    "type": "amap",
+    "class": "amap-marker",
+    "w": 40,
+    "h": 18
+  },
+  {
+    "type": "amap",
+    "class": "amap-icon",
+    "w": 40,
+    "h": 18
+  },
+  {
+    "type": "amap",
+    "class": "amap-marker",
+    "w": 40,
+    "h": 18
+  },
+  {
+    "type": "amap",
+    "class": "amap-icon",
+    "w": 40,
+    "h": 18
+  },
+  {
+    "type": "amap",
+    "class": "amap-marker",
+    "w": 40,
+    "h": 18
+  },
+  {
+    "type": "amap",
+    "class": "amap-icon",
+    "w": 40,
+    "h": 18
+  }
+]

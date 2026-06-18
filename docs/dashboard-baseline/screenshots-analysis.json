@@ -1,0 +1,86 @@
+[
+  {
+    "name": "00-default.png",
+    "size": "1920x1080",
+    "filesize_kb": 60.8,
+    "main_colors_top5": [
+      "#F1F1F1",
+      "#FBFBFB",
+      "#000000",
+      "#F2F4F4",
+      "#F2F2F2"
+    ]
+  },
+  {
+    "name": "01-after-data-loaded.png",
+    "size": "1920x1080",
+    "filesize_kb": 636.2,
+    "main_colors_top5": [
+      "#171717",
+      "#2B2B2B",
+      "#2A2A2A",
+      "#2C2C2C",
+      "#181818"
+    ]
+  },
+  {
+    "name": "02-click-实时数据.png",
+    "size": "1920x1080",
+    "filesize_kb": 761.8,
+    "main_colors_top5": [
+      "#090909",
+      "#000000",
+      "#040404",
+      "#111111",
+      "#2B2B2B"
+    ]
+  },
+  {
+    "name": "03-content-panel.png",
+    "size": "1920x1077",
+    "filesize_kb": 761.6,
+    "main_colors_top5": [
+      "#090909",
+      "#040404",
+      "#000000",
+      "#111111",
+      "#010101"
+    ]
+  },
+  {
+    "name": "04-sensor-dropdown-0.png",
+    "size": "1920x1080",
+    "filesize_kb": 761.9,
+    "main_colors_top5": [
+      "#090909",
+      "#000000",
+      "#040404",
+      "#111111",
+      "#2B2B2B"
+    ]
+  },
+  {
+    "name": "05-after-close-panel.png",
+    "size": "1920x1080",
+    "filesize_kb": 635.3,
+    "main_colors_top5": [
+      "#171717",
+      "#2B2B2B",
+      "#2A2A2A",
+      "#2C2C2C",
+      "#181818"
+    ]
+  },
+  {
+    "name": "11-timeline.png",
+    "size": "1130x48",
+    "filesize_kb": 12.8,
+    "main_colors_top5": [
+      "#000000",
+      "#CB2388",
+      "#B942B3",
+      "#9D06AB",
+      "#9404B6"
+    ]
+  }
+]

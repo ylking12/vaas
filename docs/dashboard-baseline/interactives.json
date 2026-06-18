@@ -1,0 +1,17 @@
+[
+  {
+    "idx": 0,
+    "tag": "DIV",
+    "class": "panel-btn dis ani",
+    "text": "实时数据",
+    "title": "",
+    "placeholder": "",
+    "type": "",
+    "href": "",
+    "x": 0,
+    "y": 162,
+    "w": 49,
+    "h": 130,
+    "visible": true
+  }
+]
