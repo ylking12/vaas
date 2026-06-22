@@ -15,7 +15,7 @@
 | **P7 大屏重构** | **37** | **37** | **0** | **0** | **100%** | ✅ 首版+3次迭代完成 |
 | **P7+ 后续迭代** | **4** | **1** | **0** | **3** | **25%** | ⬅️ 时间轴样式 ✅，其余待启动 |
 | **P8 工程优化** | **16** | **16** | **0** | **0** | **100%** | ✅ 红伤组+规范组+长线优化全完成 |
-| **合计** | **114** | **95** | **0** | **18** | **83%** | ⏳ P6 + P7+ 其余 |
+| **合计** | **114** | **96** | **0** | **17** | **84%** | ⏳ P6 + P7+ 其余 |
 
 ---
 
@@ -437,13 +437,20 @@ git config core.hooksPath .githooks
 3. [Truelicense 许可证路径硬编码] — LicenseCreator.java 中保留
    C:\Users\SOQ2WX\... 路径，上线前需配置化。
 
-4. [B1 时间轴联动失效] (2026-06-22 发现) — sliderValue 改变不影响后端 API
-   位置：frontend/dashboard/src/views/DashboardPage.vue:300 loadAlarmList()
-   现象：api.getAlarmList(1) hardcode hour=1，watch(sliderValue) 触发了刷新
-         但内部用了 hardcode 值，拖动时间轴看不到数据变化
-   同样问题：loadChartData() 第 315 行 hardcode sensorId/chartType
-   影响：用户拖动时间轴告警列表和图表数据不刷新（设计文档 §3.4 要求联动）
-   状态：未修，本次任务仅修样式
+4. [B1 时间轴联动失效] (2026-06-22 发现, **2026-06-22 已修**) — sliderValue 改变不影响地图事件标记
+   位置：frontend/dashboard/src/views/DashboardPage.vue loadMapEvents()
+   现象：api.getLast24hEvent(eventType) 传 `{}` 空 body，后端 hour 默认为 0，
+         拖动时间轴地图事件标记不变（始终是过去 23h 所有事件）
+   修复：watch(sliderValue) → loadMapEvents() 内部根据 sliderValue 计算 hour 传给 5 个 API
+         hour = max(0, |24 - sliderValue|)
+         - sliderValue=24 (Now) → hour=0 → 后端查 [now-23h, now]
+         - sliderValue=1 (-23h) → hour=23 → 后端查 [now-23h, now-22h]
+   关联 commits：
+   - 94cdfeb Revert "fix(dashboard): B1 时间轴联动失效 bug 修复"（回退错误方向）
+   - 3d244ac fix(dashboard): B1 时间轴联动失效 — 改为联动地图事件标记
+   验证：/tmp/verify-b1-map-events.js（5 个 API hour 完整覆盖 0-22）
+   教训：之前 fe4f746 错误推断联动方向为'告警列表'（基于设计文档 §2.2 字面意思），
+         用户实际意图是'地图事件标记'（§3.5）；设计文档 §2.2 与 §3.5 有歧义
    关联：P7+ 后续迭代-🔧 功能补齐
 
 5. [B2 p7-baseline-capture.js 端口错误] (2026-06-22 发现)
@@ -574,6 +581,39 @@ Phase {N} 完成审计
 
 提交记录:
 └── ✅ c43ed8c feat(dashboard): 时间轴样式复原 + 大屏复原基线固化
+```
+
+## P7 修复记录 (2026-06-22) - B1 时间轴联动失效 bug 修复
+
+```
+关联：已知问题 #4
+
+修复方向（最终正确）：
+└── 时间轴 → 地图事件标记联动（设计文档 §3.5）
+    NOT 告警列表联动（最初错误推断，基于 §2.2 字面歧义）
+
+3 个 commits：
+├── 94cdfeb Revert "fix(dashboard): B1 时间轴联动失效 bug 修复"（回退错误方向）
+├── 3d244ac fix(dashboard): B1 时间轴联动失效 — 改为联动地图事件标记
+└── (fe4f746 是错误的第一次尝试，已被 94cdfeb revert)
+
+修复内容：
+├── api.getLast24hEvent(eventType, hour=0) 接受 hour 参数
+├── watch(sliderValue) → loadMapEvents()（之前触发 loadAlarmList 是错的）
+└── loadMapEvents() 内部 hour = max(0, |24 - sliderValue|)
+
+验证：
+├── Network: 5 个 API hour 完整覆盖 0-22
+├── 后端 hour=1 → bump 3 条 + slip 2 条（注入生效）
+└── 后端 hour=11 → 0 条（事件都在 1h 内）
+
+教训：
+├── 设计文档 §2.2 第 68 行"联动刷新事件数据和告警列表"有歧义
+│   正确解读："事件数据"=§3.5 地图事件标记，告警列表不联动
+└── 凭文档字面意思推断功能方向不可靠，必须和用户实际意图核对
+
+独立问题（未在本次修复范围）：
+└── drawer 全屏覆盖时间轴导致手动测试不便（用户提到，后续单独修）
 ```
 
 ## P7 迭代详情：数据接入小项
