@@ -39,8 +39,12 @@ export function deleteEvent(eventId, eventType) {
   return http.post('/delete-event', { eventId, eventType })
 }
 
-export function getLast24hEvent(eventType) {
-  return http.post(`/get-last-24h-${eventType}-event`, {})
+// hour 参数语义（基于后端 TimeUtils.getTimeRange）：
+//   hour=0 或 1 → 查 [now-23h, now]（过去 23h 所有事件）
+//   hour>1     → 查 [now-23h, now-hour+1h]（过去 hour 小时窗口）
+// sliderValue (1..25) → hour 映射：hour = |24 - sliderValue|
+export function getLast24hEvent(eventType, hour = 0) {
+  return http.post(`/get-last-24h-${eventType}-event`, { hour })
 }
 
 // 在线车辆位置 - 用于显示"联网车辆"实时数量

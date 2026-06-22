@@ -214,10 +214,10 @@ const sliderMarks = computed(() => {
   return m
 })
 
-// 时间轴联动：拖动时刷新数据
+// 时间轴联动：拖动时只刷新地图事件标记（§3.5）
+// 告警列表不联动（drawer 全屏覆盖时间轴，且语义上无关）
 watch(sliderValue, (newVal) => {
-  loadAlarmList()
-  loadChartData()
+  loadMapEvents()
 })
 
 function togglePanel() { panelExpanded.value = !panelExpanded.value }
@@ -385,19 +385,25 @@ function onMapReady(instance, AMap) {
   loadMapEvents()
 }
 
+// 地图事件加载：根据 sliderValue 计算 hour，调用 5 个 /get-last-24h-*-event API
+// hour 语义（基于后端 TimeUtils.getTimeRange）：
+//   hour=0/1 → 查 [now-23h, now]
+//   hour>1   → 查 [now-23h, now-(hour-1)h]
+// sliderValue (1..25) → hour = |24 - sliderValue|（24=Now → hour=0；1=-23h → hour=23）
 async function loadMapEvents() {
   const mv = mapViewRef.value
   if (!mv) return
+  const hour = Math.max(0, Math.abs(24 - sliderValue.value))
   try {
     // P9-修复: 补全 5 种事件类型（与原大屏一致）
     // 原大屏: 颠簸/湿滑/积水/结冰/低附着
-    // P7 重写版: 之前只支持 bump/slip，现补全 ponding/ice/low-attachment
+    // addEventMarkers 内部已先清除旧事件标记再加新的（MapView.vue:105 clearMarkers）
     const [bump, slip, ponding, ice, lowAttach] = await Promise.all([
-      api.getLast24hEvent('bump').catch(() => []),
-      api.getLast24hEvent('slip').catch(() => []),
-      api.getLast24hEvent('ponding').catch(() => []),
-      api.getLast24hEvent('ice').catch(() => []),
-      api.getLast24hEvent('low-attachment').catch(() => [])
+      api.getLast24hEvent('bump', hour).catch(() => []),
+      api.getLast24hEvent('slip', hour).catch(() => []),
+      api.getLast24hEvent('ponding', hour).catch(() => []),
+      api.getLast24hEvent('ice', hour).catch(() => []),
+      api.getLast24hEvent('low-attachment', hour).catch(() => [])
     ])
     const events = [
       ...(Array.isArray(bump) ? bump.map(e => ({ ...e, eventType: 'bump' })) : []),
