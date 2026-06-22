@@ -398,6 +398,7 @@ async function loadMapEvents() {
     // P9-修复: 补全 5 种事件类型（与原大屏一致）
     // 原大屏: 颠簸/湿滑/积水/结冰/低附着
     // addEventMarkers 内部已先清除旧事件标记再加新的（MapView.vue:105 clearMarkers）
+    // 注意：即使 events 为空也要调 addEventMarkers([])，否则旧标记不会被清除
     const [bump, slip, ponding, ice, lowAttach] = await Promise.all([
       api.getLast24hEvent('bump', hour).catch(() => []),
       api.getLast24hEvent('slip', hour).catch(() => []),
@@ -412,7 +413,8 @@ async function loadMapEvents() {
       ...(Array.isArray(ice) ? ice.map(e => ({ ...e, eventType: 'ice' })) : []),
       ...(Array.isArray(lowAttach) ? lowAttach.map(e => ({ ...e, eventType: 'low-attachment' })) : [])
     ]
-    if (events.length) mv.addEventMarkers(events)
+    // 无条件调用，让 addEventMarkers 内部 clearMarkers 始终执行
+    mv.addEventMarkers(events)
   } catch {}
 }
 
