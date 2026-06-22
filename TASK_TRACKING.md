@@ -1,6 +1,6 @@
 # VaaS 项目复现 - 任务跟踪总表
 
-> 更新时间: 2026-06-12 (v16) | 全部待处理事项已收拢到此文件
+> 更新时间: 2026-06-22 (v17) | 全部待处理事项已收拢到此文件
 
 ## 进度概要
 
@@ -12,9 +12,10 @@
 | P4 集成验证 | 4 | 4 | 0 | 0 | 100% ✅ | ⬅️ 4.4 五个子任务全完成 |
 | P5 算法验证 | 2 | 2 | 0 | 0 | 100% ✅ |
 | P6 上线前整改 | 15 | 0 | 0 | 15 | 0% | 📋 已规划 |
-| **P7 大屏重构** | **37** | **37** | **0** | **0** | **100%** | ✅ 首版+2次迭代完成 |
+| **P7 大屏重构** | **37** | **37** | **0** | **0** | **100%** | ✅ 首版+3次迭代完成 |
+| **P7+ 后续迭代** | **4** | **1** | **0** | **3** | **25%** | ⬅️ 时间轴样式 ✅，其余待启动 |
 | **P8 工程优化** | **16** | **16** | **0** | **0** | **100%** | ✅ 红伤组+规范组+长线优化全完成 |
-| **合计** | **110** | **94** | **0** | **15** | **85%** | ⏳ 仅剩 P6 上线前整改 |
+| **合计** | **114** | **95** | **0** | **18** | **83%** | ⏳ P6 + P7+ 其余 |
 
 ---
 
@@ -309,8 +310,9 @@ Phase 7 - 大屏重构 (33/33) ✅ 首版完成 + 1 次迭代
 ## P7+ 后续迭代（大屏持续完善）
 
 ```
-P7 后续任务 - 待启动
+P7 后续任务 - 1/4 已完成
 ├── 🎨 大屏样式调优 — 持续根据原版系统调整视觉细节
+│   └── ✅ P7-iter.3 时间轴样式复原（2026-06-22，9 处修复，git c43ed8c）
 ├── 🧪 微服务验证可视化 — 所有微服务（receiver/detector4kt/detector4motion/
 │   vaas-backend/admin-api/Python算法）的验证结果需要在大屏上展示
 │   - 服务健康状态
@@ -319,6 +321,42 @@ P7 后续任务 - 待启动
 ├── 🔧 功能补齐 — 根据使用反馈持续完善交互细节
 └── 📊 数据监控看板 — 实时数据流入/事件处理/算法判定情况的展示
 ```
+
+### P7-iter.3 时间轴样式复原（2026-06-22）
+
+**目标**：贴齐原版 11-timeline.png + 设计文档 §3.4
+
+**9 处修复**：
+
+| # | 修复点 | 之前 | 之后 |
+|---|--------|------|------|
+| 1 | 端点文字 | 缺 | "过去23h" / "未来1h" |
+| 2 | 刻度格式 | "-23h, -22h" | 动态真实小时 HH:00 |
+| 3 | 默认位置 | 13 (-11h) | 24 (Now) |
+| 4 | 跑道渐变 | 4 色 | 6 色全光谱 |
+| 5 | 滑块图标 | slider-btn.png（AI 图标）| CSS ::before 三条垂直灰线 |
+| 6 | 滑块形状 | 直角矩形 | 圆角胶囊（border-radius: 8px）|
+| 7 | marks 位置 | margin-top: 2px（压跑道）| 15px（跑道下方，Element Plus 默认）|
+| 8 | 外框 | 无 | 黑底圆角浮层（width:70% + 黑底 + 圆角 4px）|
+| 9 | text-shadow | 有（早期尝试抗干扰）| 去掉（黑底外框已提供对比度）|
+
+**参照源**：
+- 原版 [`docs/dashboard-baseline/screenshots-v2/11-timeline.png`](docs/dashboard-baseline/screenshots-v2/11-timeline.png)（vision 描述深色主题）
+- 设计文档 [`docs/plans/2026-06-11-dashboard-redesign.md`](docs/plans/2026-06-11-dashboard-redesign.md) §3.4（'刻度：15:00, 16:00, ..., Now, ..., 15:00'）
+- baseline 摘要 [`docs/dashboard-baseline/screenshots-summary.md`](docs/dashboard-baseline/screenshots-summary.md)（深色主题确认）
+
+**自检结果**：
+- ✅ npm run build 通过（4.76s）
+- ✅ playwright 截图 + vision 验证：「非常完整、专业的大屏底部时间轴浮层」「设计感、信息层级清晰」
+
+**演进历程**（用户反馈驱动）：
+- v1：黑底外框 + 圆角 + 端点文字（原样）→ 用户："外框有点问题"
+- v2：去掉外框（透明 background + 32px 高）→ 用户："有点意思了，很接近"
+- v3：v2 + 加深羽化遮罩（0.92 黑）→ 用户："不太对不如刚才那版"
+- v4-v5：v2 + text-shadow 描边（4 向→8 向 1.5px）→ 文字仍轻微干扰
+- **v6（最终）**：恢复 v1 外框结构 + 保留后续改进（HH:00 / 6 色 / 圆角滑块 / 三条线）→ vision：「完美对齐原版」
+
+**关键教训**：用户纠正过我对 11-timeline.png 的"无外框"误判——该截图是被裁剪的纯时间轴区域，外层黑底浮层被裁掉了。**判断组件结构必须看完整大屏截图或在线原版，不能仅凭局部裁剪图**。
 
 ---
 
@@ -398,6 +436,34 @@ git config core.hooksPath .githooks
 
 3. [Truelicense 许可证路径硬编码] — LicenseCreator.java 中保留
    C:\Users\SOQ2WX\... 路径，上线前需配置化。
+
+4. [B1 时间轴联动失效] (2026-06-22 发现) — sliderValue 改变不影响后端 API
+   位置：frontend/dashboard/src/views/DashboardPage.vue:300 loadAlarmList()
+   现象：api.getAlarmList(1) hardcode hour=1，watch(sliderValue) 触发了刷新
+         但内部用了 hardcode 值，拖动时间轴看不到数据变化
+   同样问题：loadChartData() 第 315 行 hardcode sensorId/chartType
+   影响：用户拖动时间轴告警列表和图表数据不刷新（设计文档 §3.4 要求联动）
+   状态：未修，本次任务仅修样式
+   关联：P7+ 后续迭代-🔧 功能补齐
+
+5. [B2 p7-baseline-capture.js 端口错误] (2026-06-22 发现)
+   位置：docs/dashboard-baseline/p7-baseline-capture.js:7
+   现象：TARGET_URL = 'http://localhost:8083/' 硬编码
+         但按 [[fixed-service-ports]] dashboard 必须 8082
+   跑基线探测脚本直接报 ERR_CONNECTION_REFUSED
+   影响：基线回归测试无法自动跑
+   状态：未修（独立 bug，不在本次任务范围）
+   修复方案：将 8083 → 8082（仅一处）
+```
+
+### git 未提交改动（之前 session 累积）
+
+```
+6. backend/vaas-backend/pom.xml — 4 行 diff（来源不明，待确认）
+7. frontend/dashboard/src/components/Popup.vue — 2 行 diff（来源不明，待确认）
+8. docs/_generate_pdf.py — 新文件（来源不明）
+9. docs/hardware-data-protocol.md — 新文件（来源不明）
+10. docs/通勤预警协议.pdf — 新文件（来源不明）
 ```
 
 ---
@@ -482,6 +548,32 @@ Phase {N} 完成审计
 
 数据修复:
 └── ✅ 注入更多测试事件（13 颠簸 +7 湿滑 +3 积水）
+```
+
+## P7 修复记录 (2026-06-22) - 时间轴样式复原
+
+```
+参照源:
+├── 原版 docs/dashboard-baseline/screenshots-v2/11-timeline.png（vision 分析）
+├── 设计文档 docs/plans/2026-06-11-dashboard-redesign.md §3.4
+└── baseline 摘要 docs/dashboard-baseline/screenshots-summary.md
+
+9 处样式修复（详见 P7-iter.3）：
+├── ✅ 外框恢复（黑底圆角浮层）
+├── ✅ 端点文字恢复（"过去23h" / "未来1h"）
+├── ✅ 刻度格式：HH:00 真实小时
+├── ✅ 默认位置：Now
+├── ✅ 跑道渐变：6 色全光谱
+├── ✅ 滑块图标：CSS ::before 三条垂直灰线
+├── ✅ 滑块形状：圆角胶囊
+├── ✅ marks 位置：跑道下方
+└── ✅ text-shadow 去掉（黑底提供对比度）
+
+构建验证:
+└── ✅ npm run build 通过（4.76s）
+
+提交记录:
+└── ✅ c43ed8c feat(dashboard): 时间轴样式复原 + 大屏复原基线固化
 ```
 
 ## P7 迭代详情：数据接入小项
