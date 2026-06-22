@@ -313,12 +313,7 @@ function onPopupCancel() {
 }
 
 function loadAlarmList() {
-  // B1 联动修复：hour 跟随 sliderValue 变化
-  //   sliderValue 范围 1..25：1=-23h, 24=Now, 25=+1h
-  //   后端 hour 语义为"过去 N 小时告警"，所以 hour = |24 - sliderValue|
-  //   Now (24) → hour=0（当前瞬间，应为空）；+1h (25) → hour=0（未来，无意义）
-  const hour = Math.max(0, Math.abs(24 - sliderValue.value))
-  api.getAlarmList(hour).then(res => {
+  api.getAlarmList(1).then(res => {
     if (res && res.data) alarmList.value = res.data
   }).catch(() => {})
 }
