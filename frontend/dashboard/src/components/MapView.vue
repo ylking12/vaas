@@ -311,8 +311,7 @@ defineExpose({
   addVehicleMarkers, addEventMarkers, addStationMarkers,
   toggleLayer, showVehicleMarkers, clearAll, locateTo,
   setCurrentTime,
-  addPrecipPoints, clearPrecipPoints,  // 任务 2 修复
-  showEventMarkers, hideEventMarkers  // 问题 3 修复
+  addPrecipPoints, clearPrecipPoints  // 任务 2 修复
 })
 
 function showVehicleMarkers(visible) {
