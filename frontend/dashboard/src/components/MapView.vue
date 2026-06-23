@@ -154,14 +154,20 @@ function clearMarkers(arr) {
   arr.length = 0
 }
 
-let currentLayerType = null
-let overlayLayer = null  // AMap.ImageLayer (路网图)
+// 修复 4 个问题：MapView 多图层叠加 + 降水/气象设备区分
+
+// 路网图：支持多图层叠加（key=type）
+const roadNetLayers = new Map()  // type -> AMap.ImageLayer
+
+// 降水点 marker 独立存储（与 stationMarkers 区分）
+let precipMarkers = []
 
 // 图层类型 → 子目录映射（按原版命名）
 const LAYER_DIRS = {
   dryWet: 'road_humidity',     // 干湿状态
   friction: 'road_friction',   // 附着系数
-  temperature: 'road_temperature'  // 温度
+  temperature: 'road_temperature',  // 温度
+  flood: 'road_humidity'       // 积水颠簸用干湿图（同原版——它本质上就是路面湿度/积水状态）
 }
 
 // 无锡市路网 bounds（按原版：120.05, 31.36 - 120.60, 31.73，加 0.0002 偏移修正南北方向偏差）
@@ -185,54 +191,107 @@ function getImageSource(type, curTime) {
   return `/road_network_image/${dir}/${num}.webp?v=${version}`
 }
 
-// 清除路网图
-function clearRoadNetLayer() {
-  if (overlayLayer) {
-    map.remove(overlayLayer)
-    overlayLayer = null
+// 清除指定类型的路网图
+function removeRoadNetLayer(type) {
+  if (roadNetLayers.has(type)) {
+    map.remove(roadNetLayers.get(type))
+    roadNetLayers.delete(type)
   }
 }
 
-// 加载路网图
+// 清除所有路网图
+function clearAllRoadNetLayers() {
+  roadNetLayers.forEach(layer => map.remove(layer))
+  roadNetLayers.clear()
+}
+
+// 加载路网图（支持多图层叠加）
 function loadRoadNet(type, curTime) {
-  clearRoadNetLayer()
   const url = getImageSource(type, curTime)
   if (!url) return
   try {
-    overlayLayer = new AMap.ImageLayer({
+    const layer = new AMap.ImageLayer({
       bounds: new AMap.Bounds(WUXI_BOUNDS[0], WUXI_BOUNDS[1]),
       opacity: 1,
       zooms: [10, 15],
       url
     })
-    map.add(overlayLayer)
+    map.add(layer)
+    roadNetLayers.set(type, layer)
     console.log(`[loadRoadNet] type=${type} curTime=${curTime} num=${calcNum(curTime)} url=${url}`)
   } catch (err) {
     console.error('[loadRoadNet] error:', err)
   }
 }
 
-// 设置当前时间（外部调用，触发图层按时间更新）
+// 设置当前时间（外部调用，触发所有激活图层按时间更新）
 function setCurrentTime(t) {
   currentTime = t
-  if (currentLayerType) {
-    loadRoadNet(currentLayerType, currentTime)
-  }
+  // 重新加载所有激活的图层
+  const types = Array.from(roadNetLayers.keys())
+  types.forEach(t => removeRoadNetLayer(t))
+  types.forEach(t => loadRoadNet(t, currentTime))
 }
 
-// 切换图层（外部调用）
+// 切换图层（外部调用，支持多图层叠加 + toggle 关闭）
 function toggleLayer(type) {
-  if (!type || type === currentLayerType) {
-    // 关闭
-    clearRoadNetLayer()
-    currentLayerType = null
+  if (!type) {
+    // 清空所有
+    clearAllRoadNetLayers()
     emit('layer-changed', null)
     return
   }
-  currentLayerType = type
-  loadRoadNet(type, currentTime)
+  if (roadNetLayers.has(type)) {
+    // 已存在 → 移除（toggle 关闭）
+    removeRoadNetLayer(type)
+  } else {
+    // 不存在 → 添加
+    loadRoadNet(type, currentTime)
+  }
   emit('layer-changed', type)
 }
+
+// 降水点：5 个区质心（/get-rain-points 数据，null 时用 5 个气象站位置降级）
+// 视觉与气象设备（addStationMarkers 用 STATION_SVG 白色）区分：蓝色水滴占位
+function addPrecipPoints(points) {
+  clearPrecipPoints()
+  // 降级方案：后端返回 null 时用 STATIONS 的 5 个位置（用户后续给图标替换）
+  const list = (points && points.length > 0)
+    ? points
+    : STATIONS.map(s => ({
+        longitude: s.pos[0],
+        latitude: s.pos[1],
+        name: s.name,
+        intensity: 0
+      }))
+  precipMarkers = list.map(p => {
+    const el = document.createElement('div')
+    el.className = 'precip-marker'
+    el.innerHTML = '💧'  // 占位：用户后续给图标
+    el.title = `${p.name || '降水点'}: ${p.intensity || 0}mm`
+    el.style.cssText = 'background:rgba(0,150,255,0.85);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid #fff;box-shadow:0 0 6px rgba(0,150,255,0.6)'
+    const marker = new AMap.Marker({
+      position: [p.longitude, p.latitude],
+      content: el,
+      offset: new AMap.Pixel(-12, -12)
+    })
+    marker.setMap(map)
+    return marker
+  })
+}
+
+function clearPrecipPoints() {
+  precipMarkers.forEach(m => map.remove(m))
+  precipMarkers = []
+}
+
+// 暴露给外部
+defineExpose({
+  addVehicleMarkers, addEventMarkers, addStationMarkers,
+  toggleLayer, showVehicleMarkers, clearAll, locateTo,
+  setCurrentTime,
+  addPrecipPoints, clearPrecipPoints  // 任务 2 修复
+})
 
 function showVehicleMarkers(visible) {
   vehicleMarkers.forEach(m => { visible ? m.setMap(map) : m.setMap(null) })
@@ -247,8 +306,6 @@ function clearAll() {
 function locateTo(pos) {
   if (map) map.setCenter(pos)
 }
-
-defineExpose({ addVehicleMarkers, addEventMarkers, addStationMarkers, toggleLayer, showVehicleMarkers, clearAll, locateTo, setCurrentTime })
 
 onMounted(async () => {
   try {

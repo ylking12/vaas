@@ -47,6 +47,11 @@ export function getLast24hEvent(eventType, hour = 0) {
   return http.post(`/get-last-24h-${eventType}-event`, { hour })
 }
 
+// 5 个区降水点（centroid）
+export function getRainPoints() {
+  return http.get('/get-rain-points')
+}
+
 // 在线车辆位置 - 用于显示"联网车辆"实时数量
 export function getOnlineVehicles() {
   return http.get('/location')

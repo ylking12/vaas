@@ -79,28 +79,47 @@ const roadNetLayers = [
 </script>
 
 <style scoped>
-.layer-panel { color: #c0d0e0; font-size: 13px; }
+/* LayerPanel 样式（任务 2 修复：参照原版大屏视觉） */
+.layer-panel {
+  color: #c0d0e0;
+  font-size: 13px;
+  padding: 4px;
+}
 
-.panel-section { margin-bottom: 20px; }
+.panel-section { margin-bottom: 16px; }
 .panel-section h4 {
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 600;        /* 粗体（原版特征）*/
   color: #FFF6DA;
   margin-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 246, 218, 0.2);
   padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 246, 218, 0.15);
+  letter-spacing: 1px;
 }
+
+/* 按钮：原版特征 — 透明底 + 白边 + 大圆角（胶囊） */
 .layer-option {
-  padding: 6px 8px;
+  padding: 8px 12px;
   cursor: pointer;
-  border-radius: 4px;
-  margin-bottom: 2px;
-  color: #a0b0c0;
-  transition: background 0.15s;
+  border-radius: 16px;       /* 大圆角（原版 15-20px）*/
+  margin-bottom: 6px;
+  color: #ffffff;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.4);  /* 细白边 */
+  transition: all 0.15s ease;
   user-select: none;
+  font-size: 13px;
 }
-.layer-option:hover { background: rgba(255, 246, 218, 0.05); }
+.layer-option:hover {
+  background: rgba(255, 246, 218, 0.08);
+  border-color: rgba(255, 246, 218, 0.6);
+}
+
+/* 选中态：原版特征 — 浅金渐变 + 深色文字 */
 .layer-option.active {
-  background: linear-gradient(90deg, #32281e, #FFF6DA);
-  color: #FFF6DA;
+  background: linear-gradient(90deg, rgba(230, 215, 184, 0.9) 0%, rgba(255, 246, 218, 0.4) 100%);
+  color: #1a1a1a;          /* 深色文字 */
+  border-color: rgba(230, 215, 184, 0.9);
+  font-weight: 500;
 }
 </style>

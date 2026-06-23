@@ -218,10 +218,13 @@ watch(sliderValue, (newVal) => {
   mapViewRef.value?.setCurrentTime(newVal)
 })
 
-// 任务 2：drawerVisible 变化时按当前 state 自动激活/关闭图层
+// 任务 2 修复：drawerVisible 变化时按当前 state 自动激活/关闭图层
 //  - 打开：根据 selectedLayer/selectedSpecial 调 toggleLayer
 //  - 关闭：清空地图图层（state 保留）
-watch(drawerVisible, (open) => {
+//  - 用 nextTick 等待 mapViewRef.value 实际挂载（解决打开时 ref 为 null 的问题）
+import { nextTick } from 'vue'
+watch(drawerVisible, async (open) => {
+  await nextTick()
   if (open) {
     if (selectedLayer.value) {
       mapViewRef.value?.toggleLayer(selectedLayer.value)
@@ -266,11 +269,25 @@ function toggleVehicles() {
 
 function togglePrecip() {
   selectedPrecip.value = !selectedPrecip.value
-  // 降水量 = 5 个区降水点（用 5 个气象站位置代替，后端 null 时降级）
+  // 降水量 = 5 个区降水点（用户后续会给图标替代）
   if (selectedPrecip.value) {
-    mapViewRef.value?.addStationMarkers(true)
+    // 调用 /get-rain-points 拿 5 个区质心
+    api.getRainPoints().then(res => {
+      const points = (res && res.data) || []
+      if (points.length > 0) {
+        mapViewRef.value?.addPrecipPoints(points)
+      } else {
+        // 后端 null 时降级：用 5 个气象站位置显示
+        // 避免传空数组导致无 marker
+        mapViewRef.value?.addPrecipPoints([])
+        console.warn('降水量数据为空（/get-rain-points 返回 null）')
+      }
+    }).catch(err => {
+      console.error('getRainPoints failed:', err)
+      mapViewRef.value?.clearPrecipPoints()
+    })
   } else {
-    mapViewRef.value?.addStationMarkers(false)  // 临时清空（与 selectedStations 共用 stationMarkers）
+    mapViewRef.value?.clearPrecipPoints()
   }
 }
 
