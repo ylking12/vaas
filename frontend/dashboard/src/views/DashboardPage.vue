@@ -2,7 +2,7 @@
   <div class="dashboard-root">
     <div class="top-bar">
       <div class="top-left">
-        <span class="s-icon" @click="openDrawer" title="实时数据">
+        <span class="s-icon" @click="toggleDrawer" title="实时数据">
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="7" height="7"/>
             <rect x="14" y="3" width="7" height="7"/>
@@ -18,9 +18,9 @@
     </div>
     <div class="coloured-ribbon"></div>
     <div class="main-area">
-      <div class="left-panel" @mouseenter="openDrawer">
+      <div class="left-panel">
         <div class="panel-collapsed">
-          <div class="panel-btn" @click="openDrawer">实时数据</div>
+          <div class="panel-btn" @click="toggleDrawer">实时数据</div>
         </div>
       </div>
       <MapView ref="mapViewRef" @map-ready="onMapReady" @vehicle-click="onVehicleClick" @event-click="onEventClick" @station-click="onStationClick" />
@@ -222,7 +222,8 @@ watch(sliderValue, (newVal) => {
 })
 
 function goBack() { history.back() }
-function openDrawer() { drawerVisible.value = true }
+// 方案 A''：toggle 显示/隐藏（点击 S / "实时数据" 都切换）
+function toggleDrawer() { drawerVisible.value = !drawerVisible.value }
 
 const mapViewRef = ref(null)
 
