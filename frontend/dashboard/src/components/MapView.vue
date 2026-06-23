@@ -250,28 +250,25 @@ function setCurrentTime(t) {
   types.forEach(t => loadRoadNet(t, currentTime))
 }
 
-// 切换图层（外部调用，支持多图层叠加 + toggle 关闭）
-// 特殊：type='flood' **不切换**事件 marker（按用户原话"图层不能消失"）
-//   → 只 emit layer-changed 让按钮高亮切换；marker 保持当前可见状态
+// 切换图层（外部调用，问题 4 修复：add-only 不删已有）
+// 特殊：type='flood' **完全不切事件 marker**（按用户原话"图层不能消失"）
+//   → 只 emit layer-changed 让按钮高亮切换；marker 永远 setMap(map)
 function toggleLayer(type) {
   if (type === 'flood') {
-    // 不调 toggleEventMarkers（避免 marker 消失）
+    // 不调任何地图操作（按钮只切 state，不影响 marker 显隐）
     emit('layer-changed', type)
     return
   }
   if (!type) {
-    // 清空所有
-    clearAllRoadNetLayers()
+    // 不清空（按用户原话关闭 drawer 不清空地图）
     emit('layer-changed', null)
     return
   }
+  // 问题 4 修复：add-only，已有图层不删
   if (roadNetLayers.has(type)) {
-    // 已存在 → 移除（toggle 关闭）
-    removeRoadNetLayer(type)
-  } else {
-    // 不存在 → 添加
-    loadRoadNet(type, currentTime)
+    return
   }
+  loadRoadNet(type, currentTime)
   emit('layer-changed', type)
 }
 
@@ -314,7 +311,8 @@ defineExpose({
   addVehicleMarkers, addEventMarkers, addStationMarkers,
   toggleLayer, showVehicleMarkers, clearAll, locateTo,
   setCurrentTime,
-  addPrecipPoints, clearPrecipPoints  // 任务 2 修复
+  addPrecipPoints, clearPrecipPoints,  // 任务 2 修复
+  showEventMarkers, hideEventMarkers  // 问题 3 修复
 })
 
 function showVehicleMarkers(visible) {

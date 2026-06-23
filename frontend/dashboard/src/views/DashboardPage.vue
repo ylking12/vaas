@@ -179,7 +179,8 @@ const popupType = ref('info')            // info | success | warning | danger
 const popupData = ref(null)              // {label: value} 形式展示
 const popupHasButtons = ref(true)        // 决定是否显示底部默认按钮
 const pendingEvent = ref(null)           // 事件删除确认时暂存
-const selectedSpecial = ref(true)
+// 问题 2 修复：selectedSpecial 默认 false（按用户原话 marker 由按钮控制，默认不显示）
+const selectedSpecial = ref(false)
 const chartRef = ref(null)
 
 // P7-iter.2-3: roadNetLayers 已抽到 LayerPanel.vue 内部
@@ -240,14 +241,17 @@ const mapViewRef = ref(null)
 
 function toggleLayer(item) {
   if (item.isSpecial) {
-    // 路面积水颠簸：独立 toggle
+    // 路面积水颠簸：
+    // - 选中：调 loadMapEvents（fetch + addEventMarkers）显示 marker
+    // - 取消：**不**清除 marker（按用户原话"图层不能消失"）
     selectedSpecial.value = !selectedSpecial.value
-    mapViewRef.value?.toggleLayer(selectedSpecial.value ? 'flood' : null)
+    if (selectedSpecial.value) {
+      loadMapEvents()  // 拉数据 + addEventMarkers
+    }
   } else {
     // 干湿/附着/温度：互斥（再点同一项关闭）
     if (selectedLayer.value === item.key) {
       selectedLayer.value = null
-      mapViewRef.value?.toggleLayer(null)
     } else {
       selectedLayer.value = item.key
       mapViewRef.value?.toggleLayer(item.key)
@@ -437,7 +441,8 @@ let sseSource = null
 
 function onMapReady(instance, AMap) {
   mapInstance = { instance, AMap }
-  loadMapEvents()
+  // 问题 2 修复：不自动调 loadMapEvents（按用户原话"刚加载时 marker 由按钮控制"）
+  // marker 改为：用户点"路面积水颠簸事件"按钮才显示
 }
 
 // 地图事件加载：根据 sliderValue 计算 hour，调用 5 个 /get-last-24h-*-event API
