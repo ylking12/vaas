@@ -131,6 +131,14 @@ function addEventMarkers(events) {
   })
 }
 
+// 清除事件 marker（flood 按钮取消时调用）
+// 不影响其他图层（路网图/降水点/气象站），与"关闭 drawer 不清空"语义一致
+function clearEventMarkers() {
+  clearMarkers(eventMarkers)
+  lastEventData = []
+  eventMarkersVisible = false
+}
+
 // 切换事件 marker 显示/隐藏（路面积水颠簸事件按钮）
 function toggleEventMarkers() {
   eventMarkersVisible = !eventMarkersVisible
@@ -311,7 +319,8 @@ defineExpose({
   addVehicleMarkers, addEventMarkers, addStationMarkers,
   toggleLayer, showVehicleMarkers, clearAll, locateTo,
   setCurrentTime,
-  addPrecipPoints, clearPrecipPoints  // 任务 2 修复
+  addPrecipPoints, clearPrecipPoints,  // 任务 2 修复
+  clearEventMarkers                    // flood 按钮取消时清除 marker
 })
 
 function showVehicleMarkers(visible) {

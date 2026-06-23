@@ -241,12 +241,14 @@ const mapViewRef = ref(null)
 
 function toggleLayer(item) {
   if (item.isSpecial) {
-    // 路面积水颠簸：
+    // 路面积水颠簸：toggle 语义
     // - 选中：调 loadMapEvents（fetch + addEventMarkers）显示 marker
-    // - 取消：**不**清除 marker（按用户原话"图层不能消失"）
+    // - 取消：清除 marker（标准 toggle 语义）
     selectedSpecial.value = !selectedSpecial.value
     if (selectedSpecial.value) {
       loadMapEvents()  // 拉数据 + addEventMarkers
+    } else {
+      mapViewRef.value?.clearEventMarkers()
     }
   } else {
     // 干湿/附着/温度：互斥（再点同一项关闭）

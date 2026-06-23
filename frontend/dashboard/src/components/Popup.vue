@@ -93,7 +93,7 @@ onBeforeUnmount(() => {
 .popup-container {
   min-width: 360px;
   max-width: 520px;
-  background: #1a1a1a;
+  background: #090909;
   border: 1px solid rgba(255, 246, 218, 0.2);
   border-radius: 6px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
