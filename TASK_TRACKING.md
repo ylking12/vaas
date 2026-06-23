@@ -694,6 +694,37 @@ P7 错误（修复前）：
 - 按用户明确要求执行
 ```
 
+## P7 修复记录 (2026-06-23) - 方案 A'' hover 移除 + click toggle
+
+```
+关联：方案 A' 后续调整
+
+用户反馈："实时数据应该通过点击的方式控制弹框的显示和隐藏而不是通过鼠标移入"
+要求：hover 不响应，click 切换显示/隐藏（再点一次关闭）
+
+修改（4 处）：
+- L5：S 图标 @click='openDrawer' → @click='toggleDrawer'
+- L21：left-panel 删 @mouseenter='openDrawer'（hover 不再触发）
+- L23：panel-btn @click='openDrawer' → @click='toggleDrawer'
+- L237：openDrawer() { drawerVisible.value = true }
+       → toggleDrawer() { drawerVisible.value = !drawerVisible.value }
+
+行为（playwright /tmp/verify-panel-aa.js 验证 PASS）：
+| 操作 | left 宽 | drawer 宽 |
+|------|--------|----------|
+| 默认 | 43 | 无 |
+| hover left-panel | 43 | 无（hover 不响应）|
+| click S (1st) | 43 | 1690（打开）|
+| click S (2nd) | 43 | 无（关闭）|
+| click 实时数据 (1st) | 43 | 1690 |
+| click 实时数据 (2nd) | 43 | 无 |
+
+与原版差异：
+- 原版：hover 展开 288px 小弹窗
+- A''：hover 不响应 + click toggle drawer
+- 与 A' 的差异：A' 是 hover 也触发，A'' 是只 click 触发
+```
+
 ## P7 迭代详情：数据接入小项
 
 **任务**：[P7-iter.1] 联网车辆数 + 降水量数值接入
