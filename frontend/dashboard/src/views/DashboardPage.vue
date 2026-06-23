@@ -262,9 +262,22 @@ function toggleLayer(item) {
 }
 
 // 任务 2：3 个新增 toggle
+// P7-iter.7：开启时启动 5s 间隔 timer 持续拉位置数据，让 marker 移动
+// 关闭时停止 timer，避免不必要的后台拉取
+let vehicleTimer = null
 function toggleVehicles() {
   selectedVehicles.value = !selectedVehicles.value
-  if (selectedVehicles.value) loadOnlineVehicles()  // 拉一次
+  if (selectedVehicles.value) {
+    loadOnlineVehicles()  // 立即拉一次
+    if (vehicleTimer) clearInterval(vehicleTimer)
+    // 与 simulator 推送间隔（5s）对齐，保证地图 marker 实时刷新
+    vehicleTimer = setInterval(loadOnlineVehicles, 5000)
+  } else {
+    if (vehicleTimer) {
+      clearInterval(vehicleTimer)
+      vehicleTimer = null
+    }
+  }
   mapViewRef.value?.showVehicleMarkers(selectedVehicles.value)
 }
 
@@ -520,6 +533,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (refreshTimer) clearInterval(refreshTimer)
+  if (vehicleTimer) clearInterval(vehicleTimer)
   if (sseSource) sseSource.close()
 })
 </script>

@@ -19,13 +19,14 @@ import redis
 
 
 # 5 辆车的初始位置（与 fleet_management 表 imei 对应，沿无锡主干道分布）
-# 这些位置是当前 5 辆车的"当前位置"，每次循环沿当前方向微移 ±0.0005 度模拟行驶
+# dir_axis='lng' 沿经度方向走；'lat' 沿纬度方向走
+# 每辆车绑定一个轴向 + 初始方向，更像沿路直线行驶
 INITIAL_POSITIONS = {
-    '860123456789001': {'lng': 120.40, 'lat': 31.55, 'dir_lng': 1, 'dir_lat': 0},
-    '860123456789002': {'lng': 120.45, 'lat': 31.58, 'dir_lng': -1, 'dir_lat': 0},
-    '860123456789003': {'lng': 120.38, 'lat': 31.52, 'dir_lng': 0, 'dir_lat': 1},
-    '860123456789004': {'lng': 120.42, 'lat': 31.60, 'dir_lng': 1, 'dir_lat': 1},
-    '860123456789005': {'lng': 120.36, 'lat': 31.56, 'dir_lng': 0, 'dir_lat': -1},
+    '860123456789001': {'lng': 120.30, 'lat': 31.55, 'dir_axis': 'lng', 'dir_lng': 1,  'dir_lat': 0},
+    '860123456789002': {'lng': 120.45, 'lat': 31.58, 'dir_axis': 'lng', 'dir_lng': -1, 'dir_lat': 0},
+    '860123456789003': {'lng': 120.42, 'lat': 31.40, 'dir_axis': 'lat', 'dir_lng': 0,  'dir_lat': 1},
+    '860123456789004': {'lng': 120.50, 'lat': 31.60, 'dir_axis': 'lng', 'dir_lng': -1, 'dir_lat': 0},
+    '860123456789005': {'lng': 120.38, 'lat': 31.68, 'dir_axis': 'lat', 'dir_lng': 0,  'dir_lat': -1},
 }
 
 # 无锡大致 bounds：120.05-120.60, 31.36-31.73（贴原大屏 WUXI_BOUNDS）
@@ -35,9 +36,8 @@ BOUNDS = {
     'lat_min': 31.38, 'lat_max': 31.71,
 }
 
-# 速度范围（km/h，模拟城市道路）
-SPEED_MIN = 20
-SPEED_MAX = 60
+# 固定速度（30m/5s ≈ 21.6 km/h，按用户原话"5s 推 30m"）
+SPEED_KMH = 21.6
 
 # Redis key 前缀（与 RedisKeyConfig.VehicleInfoPrefix 一致）
 VEHICLE_KEY_PREFIX = 'vaas:vehicle:info:'
@@ -48,23 +48,31 @@ def clamp(val, lo, hi):
 
 
 def move_position(state):
-    """按当前方向偏移 ±0.0005 度，碰 bounds 反向"""
-    # 随机小步长 (0.0001 ~ 0.0006)
-    step_lng = random.uniform(0.0001, 0.0006) * state['dir_lng']
-    step_lat = random.uniform(0.0001, 0.0006) * state['dir_lat']
+    """按当前方向偏移固定 30m，碰 bounds 反向
+    30m 在无锡纬度：≈ 0.00032 经度 / 0.00027 纬度"""
+    # 5s 移动 30m ≈ 21.6 km/h（合理城市道路速度）
+    STEP_LNG = 0.00032   # ~30m 经度
+    STEP_LAT = 0.00027   # ~30m 纬度
 
-    new_lng = state['lng'] + step_lng
-    new_lat = state['lat'] + step_lat
+    # 每辆车用统一的轴向（不混向）：东/西 OR 南/北，更像沿路行驶
+    # 通过 dir_axis 控制：'lng' = 沿经度方向走，'lat' = 沿纬度方向走
+    if state['dir_axis'] == 'lng':
+        new_lng = state['lng'] + STEP_LNG * state['dir_lng']
+        new_lat = state['lat']
+    else:
+        new_lng = state['lng']
+        new_lat = state['lat'] + STEP_LAT * state['dir_lat']
 
-    # 碰 lng 边界反向
-    if new_lng < BOUNDS['lng_min'] or new_lng > BOUNDS['lng_max']:
-        state['dir_lng'] *= -1
-        new_lng = clamp(new_lng, BOUNDS['lng_min'], BOUNDS['lng_max'])
-
-    # 碰 lat 边界反向
-    if new_lat < BOUNDS['lat_min'] or new_lat > BOUNDS['lat_max']:
-        state['dir_lat'] *= -1
-        new_lat = clamp(new_lat, BOUNDS['lat_min'], BOUNDS['lat_max'])
+    # 碰 lng 边界反向（沿 lng 轴的车）
+    if state['dir_axis'] == 'lng':
+        if new_lng < BOUNDS['lng_min'] or new_lng > BOUNDS['lng_max']:
+            state['dir_lng'] *= -1
+            new_lng = clamp(new_lng, BOUNDS['lng_min'], BOUNDS['lng_max'])
+    # 碰 lat 边界反向（沿 lat 轴的车）
+    else:
+        if new_lat < BOUNDS['lat_min'] or new_lat > BOUNDS['lat_max']:
+            state['dir_lat'] *= -1
+            new_lat = clamp(new_lat, BOUNDS['lat_min'], BOUNDS['lat_max'])
 
     state['lng'] = new_lng
     state['lat'] = new_lat
@@ -72,9 +80,11 @@ def move_position(state):
 
 
 def build_payload(state):
-    """构造 CachedVehiclePosition JSON（与后端 Java 字段名一致）"""
+    """构造 CachedVehiclePosition JSON（与后端 Java 字段名一致）
+    speed 固定按 30m/5s = 21.6 km/h 算，符合'5s 推 30m'的视觉观感"""
     now_ms = int(time.time() * 1000)
-    speed = round(random.uniform(SPEED_MIN, SPEED_MAX), 1)
+    # 30m / 5s = 6 m/s = 21.6 km/h（用户要求 30m/5s 对应速度）
+    speed = 21.6
     return {
         'longitude': round(state['lng'], 6),
         'latitude': round(state['lat'], 6),
