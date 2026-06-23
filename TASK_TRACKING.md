@@ -1,6 +1,6 @@
 # VaaS 项目复现 - 任务跟踪总表
 
-> 更新时间: 2026-06-23 (v20) | 全部待处理事项已收拢到此文件
+> 更新时间: 2026-06-23 (v21) | 全部待处理事项已收拢到此文件
 
 ## 进度概要
 
@@ -13,7 +13,7 @@
 | P5 算法验证 | 2 | 2 | 0 | 0 | 100% ✅ |
 | P6 上线前整改 | 15 | 0 | 0 | 15 | 0% | 📋 已规划 |
 | **P7 大屏重构** | **37** | **37** | **0** | **0** | **100%** | ✅ 首版+3次迭代完成 |
-| **P7+ 后续迭代** | **4** | **4** | **0** | **0** | **100%** | ⬅️ 时间轴/drawer/B1/方案A' 全完成 |
+| **P7+ 后续迭代** | **5** | **5** | **0** | **0** | **100%** | ⬅️ 时间轴/drawer/B1/方案A'/flood-toggle 全完成 |
 | **P8 工程优化** | **16** | **16** | **0** | **0** | **100%** | ✅ 红伤组+规范组+长线优化全完成 |
 | **合计** | **114** | **99** | **0** | **15** | **87%** | ⏳ 仅剩 P6 |
 
@@ -310,11 +310,12 @@ Phase 7 - 大屏重构 (33/33) ✅ 首版完成 + 1 次迭代
 ## P7+ 后续迭代（大屏持续完善）
 
 ```
-P7 后续任务 - 4/4 已完成 ✅
+P7 后续任务 - 5/5 已完成 ✅
 ├── 🎨 大屏样式调优 — 持续根据原版系统调整视觉细节
 │   ├── ✅ P7-iter.3 时间轴样式复原（2026-06-22，9 处修复，git c43ed8c）
 │   ├── ✅ P7-iter.4 drawer 弹框全屏 → 88% 宽半透明黑（2026-06-23，git 7f8c0e3）
-│   └── ✅ P7-iter.5 方案 A' - hover/click 直接打开 drawer（移除小弹窗 2026-06-23）
+│   ├── ✅ P7-iter.5 方案 A' - hover/click 直接打开 drawer（移除小弹窗 2026-06-23）
+│   └── ✅ P7-iter.6 flood 按钮取消时清除事件 marker（2026-06-23，git b2e401c）
 ├── 🧪 微服务验证可视化 — 所有微服务（receiver/detector4kt/detector4motion/
 │   vaas-backend/admin-api/Python算法）的验证结果需要在大屏上展示
 │   - 服务健康状态
@@ -360,6 +361,32 @@ P7 后续任务 - 4/4 已完成 ✅
 - **v6（最终）**：恢复 v1 外框结构 + 保留后续改进（HH:00 / 6 色 / 圆角滑块 / 三条线）→ vision：「完美对齐原版」
 
 **关键教训**：用户纠正过我对 11-timeline.png 的"无外框"误判——该截图是被裁剪的纯时间轴区域，外层黑底浮层被裁掉了。**判断组件结构必须看完整大屏截图或在线原版，不能仅凭局部裁剪图**。
+
+---
+
+### P7-iter.6 flood 按钮 toggle 语义修复（2026-06-23）
+
+**问题**：选中"路面积水颠簸事件"按钮后地图显示 5 个事件 marker；再次点击取消时 marker 不消失。
+
+**根因**：[DashboardPage.vue:243-250](frontend/dashboard/src/views/DashboardPage.vue#L243-L250) `toggleLayer` 的 `isSpecial` 分支只处理了"选中→拉数据"，`else` 什么都不做，违反 toggle 按钮标准语义。
+
+**修复**（git b2e401c）：
+- [MapView.vue](frontend/dashboard/src/components/MapView.vue) 新增 `clearEventMarkers()`：`clearMarkers(eventMarkers)` + 重置 `lastEventData=[]` + `eventMarkersVisible=false`
+- `defineExpose` 暴露 `clearEventMarkers`
+- [DashboardPage.vue](frontend/dashboard/src/views/DashboardPage.vue) `toggleLayer` isSpecial 取消分支调 `mapViewRef.value?.clearEventMarkers()`
+
+**保留的语义**：
+- 关闭 drawer 不清空地图内容（drawer 关闭时不调任何 marker 操作）
+- 重新打开 drawer 状态保留（`selectedSpecial` ref 维持）
+
+**自检结果**（playwright 无痕模式 5 阶段验证）：
+| 阶段 | 操作 | event-marker | 期望 | 结果 |
+|------|------|--------------|------|------|
+| 1 | 默认进入 | 0 | 0 | ✅ |
+| 2 | 打开 drawer（flood 未选）| 0 | 0 | ✅ |
+| 3 | 选中 flood | 5 | >0 | ✅ |
+| 4 | 取消 flood | 0 | 0 | ✅ |
+| 5 | 重新选中 flood | 5 | >0 | ✅ |
 
 ---
 
