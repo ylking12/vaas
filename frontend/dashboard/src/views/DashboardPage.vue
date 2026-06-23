@@ -415,11 +415,21 @@ function loadCoveredData() {
 }
 
 // 联网车辆数：/location 返回 Map<deviceId, OnlineVehicle>
+// 同步把车辆数据喂给 MapView 加 marker（之前只更新计数，没传数据）
 function loadOnlineVehicles() {
   api.getOnlineVehicles().then(res => {
     if (res && typeof res === 'object') {
-      // 后端直接返回 Map，axios 拦截器已 unwrap 到 res.data
       onlineCount.value = Object.keys(res).length
+      // 字段归一化：API 返回 coordinates.{longitude,latitude} + plateNumber
+      // MapView addVehicleMarkers 用 v.lng / v.lat / v.plate
+      const vehicles = Object.values(res).map(v => ({
+        lng: v.coordinates?.longitude,
+        lat: v.coordinates?.latitude,
+        plate: v.plateNumber,
+        speed: v.speed,
+        deviceId: v.deviceId
+      }))
+      mapViewRef.value?.addVehicleMarkers(vehicles)
     }
   }).catch(() => {})
 }
