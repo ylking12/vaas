@@ -1,6 +1,6 @@
 # VaaS 项目复现 - 任务跟踪总表
 
-> 更新时间: 2026-06-23 (v19) | 全部待处理事项已收拢到此文件
+> 更新时间: 2026-06-23 (v20) | 全部待处理事项已收拢到此文件
 
 ## 进度概要
 
@@ -13,9 +13,9 @@
 | P5 算法验证 | 2 | 2 | 0 | 0 | 100% ✅ |
 | P6 上线前整改 | 15 | 0 | 0 | 15 | 0% | 📋 已规划 |
 | **P7 大屏重构** | **37** | **37** | **0** | **0** | **100%** | ✅ 首版+3次迭代完成 |
-| **P7+ 后续迭代** | **4** | **3** | **0** | **1** | **75%** | ⬅️ 时间轴 ✅ + drawer ✅ + B1 ✅ |
+| **P7+ 后续迭代** | **4** | **4** | **0** | **0** | **100%** | ⬅️ 时间轴/drawer/B1/方案A' 全完成 |
 | **P8 工程优化** | **16** | **16** | **0** | **0** | **100%** | ✅ 红伤组+规范组+长线优化全完成 |
-| **合计** | **114** | **98** | **0** | **15** | **86%** | ⏳ P6 + P7+ 其余 1 |
+| **合计** | **114** | **99** | **0** | **15** | **87%** | ⏳ 仅剩 P6 |
 
 ---
 
@@ -310,10 +310,11 @@ Phase 7 - 大屏重构 (33/33) ✅ 首版完成 + 1 次迭代
 ## P7+ 后续迭代（大屏持续完善）
 
 ```
-P7 后续任务 - 3/4 已完成
+P7 后续任务 - 4/4 已完成 ✅
 ├── 🎨 大屏样式调优 — 持续根据原版系统调整视觉细节
 │   ├── ✅ P7-iter.3 时间轴样式复原（2026-06-22，9 处修复，git c43ed8c）
-│   └── ✅ P7-iter.4 drawer 弹框全屏 → 88% 宽半透明黑（2026-06-23，git 7f8c0e3）
+│   ├── ✅ P7-iter.4 drawer 弹框全屏 → 88% 宽半透明黑（2026-06-23，git 7f8c0e3）
+│   └── ✅ P7-iter.5 方案 A' - hover/click 直接打开 drawer（移除小弹窗 2026-06-23）
 ├── 🧪 微服务验证可视化 — 所有微服务（receiver/detector4kt/detector4motion/
 │   vaas-backend/admin-api/Python算法）的验证结果需要在大屏上展示
 │   - 服务健康状态
@@ -658,6 +659,39 @@ P7 错误（修复前）：
 - 设计文档 §2.1/§3.3 的"全屏"是错误的，原版实际 88% 宽
 - playwright 直接访问原版获取 DOM 数据是**最权威参照**
 - 不要凭感觉加 backdrop-filter 等增强（规则 1：还原度第一）
+```
+
+## P7 修复记录 (2026-06-23) - 方案 A' 小弹窗合并到大弹窗
+
+```
+关联：P7+ 后续迭代-🎨 大屏样式调优（接 iter.4 drawer 修复）
+
+用户反馈：左侧实时数据按钮点开时同时出现"小弹窗（288px 展开）+ 大弹窗（1690px drawer）"
+要求：移除小弹窗，hover/click 都直接打开大弹窗
+
+修改：
+├── 模板：S 图标 @click='togglePanel' → @click='openDrawer'
+├── 模板：left-panel @mouseenter='panelExpanded = true' → @mouseenter='openDrawer'
+│        删除 @mouseleave（hover 离开不关 drawer，用 X 按钮关）
+│        删除 :class="{ expanded: panelExpanded }"
+├── 模板：删除 panel-content 整块（25-34 行含 LayerPanel）— LayerPanel 仍出现在 drawer-left
+├── Script：删除 panelExpanded ref + togglePanel 函数
+├── CSS：删除 .left-panel.expanded（width 288px + 背景）+ .panel-content 样式
+
+最终行为（playwright /tmp/verify-panel-a.js 验证 PASS）：
+| 操作 | left 宽 | drawer 宽 |
+|------|--------|----------|
+| 默认 | 43px | 无 |
+| hover left-panel | 43px | 1690（直接打开）|
+| click S 图标 | 43px | 1690 |
+| click '实时数据' | 43px | 1690 |
+| click drawer X 关闭 | 43px | 无 |
+
+与原版实际差异（诚实告知）：
+- 原版：hover left-panel → 展开 288px LayerPanel 小弹窗
+- 修改后：hover → 直接打开 drawer 1690
+- LayerPanel 内容不变（仍出现在 drawer-left）
+- 按用户明确要求执行
 ```
 
 ## P7 迭代详情：数据接入小项
