@@ -158,125 +158,113 @@ let currentLayerType = null
 let overlayLayer = null
 let heatmap = null
 
-// 图层配置
-const layerConfigs = {
-  dryWet: {
-    name: '路面干湿状态',
-    color: 'rgba(0, 150, 255, 0.3)',
-    data: [] // 需要从 API 获取
-  },
-  friction: {
-    name: '路面附着系数',
-    gradient: { 0: 'rgba(255,0,0,0.5)', 0.5: 'rgba(255,255,0,0.5)', 1: 'rgba(0,255,0,0.5)' },
-    data: []
-  },
-  temperature: {
-    name: '路面温度',
-    gradient: { 0: 'rgba(0,0,255,0.5)', 20: 'rgba(0,255,0,0.5)', 40: 'rgba(255,0,0,0.5)' },
-    data: []
-  },
-  flood: {
-    name: '路面积水颠簸',
-    color: 'rgba(0, 100, 200, 0.4)',
-    data: []
+// 5 个气象站经纬度（来源：后端 VehicleEventService.java:197-200）
+const STATION_COORDS = [
+  { id: 1, name: '文惠路与锦绣路',     lng: 120.29628, lat: 31.68117 },
+  { id: 2, name: '贡湖大道与金城路口', lng: 120.4279,  lat: 31.5848  },
+  { id: 3, name: '运河西路',           lng: 120.281,   lat: 31.566   },
+  { id: 4, name: '机场路-泰山路',       lng: 120.3707,  lat: 31.541   },
+  { id: 5, name: '高浪路-兴梁道',       lng: 120.32034, lat: 31.5017  }
+]
+
+// API 基础地址（从 import.meta.env 取）
+const API_BASE = (import.meta.env.VITE_API_BASE || 'http://localhost:50410/spring/v1').replace(/\/+$/, '')
+
+// 根据图层类型 + 传感器数据计算 fillColor
+function getColorForLayer(type, d) {
+  switch (type) {
+    case 'dryWet': {
+      // 水层厚度越大越红（干燥=蓝/潮湿=黄/积水=红）
+      const t = d.waterLayerThickness || 0
+      if (t >= 1) return '#ff3333'   // 积水
+      if (t >= 0.1) return '#ffaa33' // 潮湿
+      return '#0096ff'               // 干燥
+    }
+    case 'friction': {
+      // 附着系数越小越红（高=绿/中=黄/低=红）
+      const g = d.levelOfGrip || 1
+      if (g < 0.5) return '#ff3333'
+      if (g < 0.7) return '#ffaa33'
+      return '#00cc66'
+    }
+    case 'temperature': {
+      // 路面温度（低=蓝/中=绿/高=红）
+      const t = d.roadSurfaceTemperature || 25
+      if (t < 10) return '#0066ff'
+      if (t < 25) return '#00cc66'
+      if (t < 35) return '#ffaa33'
+      return '#ff3333'
+    }
+    default:
+      return '#0096ff'
   }
 }
 
-function toggleLayer(type) {
-  // 移除现有图层
+// 清除所有覆盖图层
+function clearAllLayers() {
   if (overlayLayer) {
-    if (Array.isArray(overlayLayer)) {
-      overlayLayer.forEach(p => p.setMap(null))
-    } else {
-      overlayLayer.setMap(null)
-    }
+    if (Array.isArray(overlayLayer)) overlayLayer.forEach(p => p.setMap(null))
+    else overlayLayer.setMap(null)
     overlayLayer = null
   }
   if (heatmap) {
     heatmap.setMap(null)
     heatmap = null
   }
+}
 
-  // 切换状态
+// 拉取 5 站实时传感器数据
+async function fetchAllStationsSensor() {
+  const promises = STATION_COORDS.map(s =>
+    fetch(`${API_BASE}/get_real_time_sensor_data`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ road_name: String(s.id) })
+    })
+      .then(r => r.ok ? r.json() : null)
+      .catch(() => null)
+  )
+  const results = await Promise.all(promises)
+  return results.map((r, i) => ({ ...STATION_COORDS[i], ...(r || {}) }))
+}
+
+// 真实数据图层：5 站 AMap.Circle，fillColor 按属性变色
+async function toggleLayer(type) {
+  // 清除现有
+  clearAllLayers()
+
   if (!type || type === currentLayerType) {
     currentLayerType = null
     emit('layer-changed', null)
     return
   }
-
   currentLayerType = type
-  const config = layerConfigs[type]
-  console.log('Layer activated:', config.name, 'type:', type)
 
-  // 创建简单的圆形标记作为图层可视化（简化版）
-  const overlayMarkers = []
-  const color = type === 'dryWet' ? '#0096ff' : type === 'flood' ? '#0064c8' : '#ffd700'
+  // 拉真实数据
+  let sensorData = []
+  try {
+    sensorData = await fetchAllStationsSensor()
+  } catch (e) {
+    console.error('fetchAllStationsSensor failed:', e)
+    return
+  }
 
-  // 在地图中心区域创建一些可视化点
-  const centerPoints = [
-    [120.38, 31.52], [120.40, 31.53], [120.42, 31.50],
-    [120.36, 31.55], [120.44, 31.51], [120.39, 31.54]
-  ]
-
-  centerPoints.forEach(([lng, lat]) => {
+  // 5 站各画一个 AMap.Circle（真实坐标 + 真实属性变色）
+  const circles = sensorData.map(d => {
+    const fillColor = getColorForLayer(type, d)
     const circle = new AMap.Circle({
-      center: [lng, lat],
-      radius: 500,
-      fillColor: color,
-      fillOpacity: 0.3,
-      strokeColor: color,
-      strokeWeight: 2,
-      strokeOpacity: 0.8
+      center: [d.lng, d.lat],
+      radius: 1500,  // 1.5km
+      fillColor, fillOpacity: 0.4,
+      strokeColor: fillColor, strokeWeight: 2, strokeOpacity: 0.8
     })
     circle.setMap(map)
-    overlayMarkers.push(circle)
+    return circle
   })
 
-  overlayLayer = overlayMarkers
-  console.log(`Created ${overlayMarkers.length} overlay circles for ${config.name}`)
+  overlayLayer = circles
+  console.log(`[toggleLayer] ${type} - drew ${circles.length} real station circles`)
   emit('layer-changed', type)
-}
-
-// 生成模拟热力图数据
-function generateMockHeatmapData(type) {
-  const points = []
-  const count = 50
-  for (let i = 0; i < count; i++) {
-    points.push({
-      lng: 120.3 + Math.random() * 0.3,
-      lat: 31.4 + Math.random() * 0.2,
-      count: Math.floor(Math.random() * 100)
-    })
-  }
-  return points
-}
-
-// 生成模拟多边形数据
-function generateMockPolygons(type) {
-  const polygons = []
-  const color = type === 'dryWet' ? 'rgba(0, 150, 255, 0.2)' : 'rgba(0, 100, 200, 0.3)'
-  const strokeColor = type === 'dryWet' ? '#0096ff' : '#0064c8'
-
-  // 创建几个模拟路段多边形
-  const segments = [
-    [[120.35, 31.55], [120.36, 31.55], [120.36, 31.56], [120.35, 31.56]],
-    [[120.38, 31.52], [120.40, 31.52], [120.40, 31.53], [120.38, 31.53]],
-    [[120.42, 31.50], [120.44, 31.50], [120.44, 31.51], [120.42, 31.51]]
-  ]
-
-  segments.forEach(path => {
-    const polygon = new AMap.Polygon({
-      path: path,
-      fillColor: color,
-      fillOpacity: 0.5,
-      strokeColor: strokeColor,
-      strokeWeight: 2,
-      strokeOpacity: 0.8
-    })
-    polygons.push(polygon)
-  })
-
-  return polygons
 }
 
 function showVehicleMarkers(visible) {
