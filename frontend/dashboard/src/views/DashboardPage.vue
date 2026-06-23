@@ -50,8 +50,13 @@
             :precip-text="precipText"
             :selected-layer="selectedLayer"
             :selected-special="selectedSpecial"
+            :selected-vehicles="selectedVehicles"
+            :selected-precip="selectedPrecip"
+            :selected-stations="selectedStations"
             @toggle-layer="toggleLayer"
-            @show-weather-device="showWeatherDevice"
+            @toggle-vehicles="toggleVehicles"
+            @toggle-precip="togglePrecip"
+            @toggle-stations="toggleStations"
           />
         </div>
         <div class="drawer-center">
@@ -162,7 +167,10 @@ const weatherData = reactive({ text: '', temp: 0, humidity: 0 })
 const summaryData = reactive({ num_bumpyroad: 0, num_wetroad: 0, num_waterroad: 0, bumpyRoadArray: [], slipperyRoadArray: [], waterRoadArray: [] })
 const onlineCount = ref(0)        // 联网车辆数（来自 /location 接口）
 const precipText = ref('--')     // 降水量（来自 /get_weather.precip）
-const selectedLayer = ref('dryWet')
+const selectedLayer = ref('dryWet')  // 路网状态默认选中第 1 个（干湿）
+const selectedVehicles = ref(false)  // 联网车辆（默认未选）
+const selectedPrecip = ref(false)     // 降水量（默认未选）
+const selectedStations = ref(false)   // 气象设备（默认未选）
 
 // P7-iter.2-1: 自定义 Popup 状态
 const popupVisible = ref(false)
@@ -210,6 +218,23 @@ watch(sliderValue, (newVal) => {
   mapViewRef.value?.setCurrentTime(newVal)
 })
 
+// 任务 2：drawerVisible 变化时按当前 state 自动激活/关闭图层
+//  - 打开：根据 selectedLayer/selectedSpecial 调 toggleLayer
+//  - 关闭：清空地图图层（state 保留）
+watch(drawerVisible, (open) => {
+  if (open) {
+    if (selectedLayer.value) {
+      mapViewRef.value?.toggleLayer(selectedLayer.value)
+    }
+    if (selectedSpecial.value) {
+      mapViewRef.value?.toggleLayer('flood')
+    }
+  } else {
+    // 关闭抽屉：清空地图图层但保留 state（用户重开时再激活）
+    mapViewRef.value?.toggleLayer(null)
+  }
+})
+
 // 方案 A''：toggle 显示/隐藏（点击 "实时数据" 切换）
 function toggleDrawer() { drawerVisible.value = !drawerVisible.value }
 
@@ -217,12 +242,41 @@ const mapViewRef = ref(null)
 
 function toggleLayer(item) {
   if (item.isSpecial) {
+    // 路面积水颠簸：独立 toggle
     selectedSpecial.value = !selectedSpecial.value
     mapViewRef.value?.toggleLayer(selectedSpecial.value ? 'flood' : null)
   } else {
-    selectedLayer.value = item.key
-    mapViewRef.value?.toggleLayer(item.key)
+    // 干湿/附着/温度：互斥（再点同一项关闭）
+    if (selectedLayer.value === item.key) {
+      selectedLayer.value = null
+      mapViewRef.value?.toggleLayer(null)
+    } else {
+      selectedLayer.value = item.key
+      mapViewRef.value?.toggleLayer(item.key)
+    }
   }
+}
+
+// 任务 2：3 个新增 toggle
+function toggleVehicles() {
+  selectedVehicles.value = !selectedVehicles.value
+  if (selectedVehicles.value) loadOnlineVehicles()  // 拉一次
+  mapViewRef.value?.showVehicleMarkers(selectedVehicles.value)
+}
+
+function togglePrecip() {
+  selectedPrecip.value = !selectedPrecip.value
+  // 降水量 = 5 个区降水点（用 5 个气象站位置代替，后端 null 时降级）
+  if (selectedPrecip.value) {
+    mapViewRef.value?.addStationMarkers(true)
+  } else {
+    mapViewRef.value?.addStationMarkers(false)  // 临时清空（与 selectedStations 共用 stationMarkers）
+  }
+}
+
+function toggleStations() {
+  selectedStations.value = !selectedStations.value
+  mapViewRef.value?.addStationMarkers(selectedStations.value)
 }
 
 function changeSensor(val) {
