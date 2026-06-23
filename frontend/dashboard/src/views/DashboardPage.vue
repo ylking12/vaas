@@ -2,7 +2,7 @@
   <div class="dashboard-root">
     <div class="top-bar">
       <div class="top-left">
-        <span class="s-icon" @click="togglePanel" title="切换面板">
+        <span class="s-icon" @click="openDrawer" title="实时数据">
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="7" height="7"/>
             <rect x="14" y="3" width="7" height="7"/>
@@ -18,19 +18,9 @@
     </div>
     <div class="coloured-ribbon"></div>
     <div class="main-area">
-      <div class="left-panel" :class="{ expanded: panelExpanded }" @mouseenter="panelExpanded = true" @mouseleave="panelExpanded = false">
+      <div class="left-panel" @mouseenter="openDrawer">
         <div class="panel-collapsed">
           <div class="panel-btn" @click="openDrawer">实时数据</div>
-        </div>
-        <div class="panel-content" v-show="panelExpanded">
-          <LayerPanel
-            :online-count="onlineCount"
-            :precip-text="precipText"
-            :selected-layer="selectedLayer"
-            :selected-special="selectedSpecial"
-            @toggle-layer="toggleLayer"
-            @show-weather-device="showWeatherDevice"
-          />
         </div>
       </div>
       <MapView ref="mapViewRef" @map-ready="onMapReady" @vehicle-click="onVehicleClick" @event-click="onEventClick" @station-click="onStationClick" />
@@ -173,7 +163,6 @@ import * as XLSX from 'xlsx'
 
 const store = useDashboardStore()
 const drawerVisible = ref(false)
-const panelExpanded = ref(false)
 // P7+ 时间轴：默认 Now 位置（24=现在），原版也是 Now 在中部偏右
 const sliderValue = ref(24)
 const sensorId = ref(1)
@@ -232,7 +221,6 @@ watch(sliderValue, (newVal) => {
   loadMapEvents()
 })
 
-function togglePanel() { panelExpanded.value = !panelExpanded.value }
 function goBack() { history.back() }
 function openDrawer() { drawerVisible.value = true }
 
@@ -474,11 +462,13 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; font-family: 'No
 .s-icon { cursor: pointer; color: #FFF6DA; padding: 6px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; transition: background 0.2s; }
 .s-icon:hover { background: rgba(255, 246, 218, 0.1); }
 .main-area { flex: 1; position: relative; overflow: hidden; }
-.left-panel { position: absolute; left: 0; top: 0; height: 100%; width: 43px; background: transparent; transition: width 0.3s; z-index: 5; overflow: hidden; }
-.left-panel.expanded { background: rgba(0,0,0,0.8); width: 288px; }
+/* P7+ 方案 A'：left-panel 永远 43px 折叠态（小弹窗删除）
+   - hover 触发 openDrawer（不展开 left-panel）
+   - click "实时数据" / S 图标 都触发 openDrawer
+   - drawer 在 drawer 内显示 LayerPanel（保持功能）*/
+.left-panel { position: absolute; left: 0; top: 0; height: 100%; width: 43px; background: transparent; z-index: 5; overflow: hidden; }
 .panel-collapsed { width: 43px; }
 .panel-btn { writing-mode: vertical-lr; padding: 16px 12px; cursor: pointer; color: #FFF6DA; font-size: 19.2px; background: #000; font-family: 'Noto Sans SC', sans-serif; }
-.panel-content { width: 245px; padding: 12px; color: #c0d0e0; font-size: 13px; }
 .panel-section { margin-bottom: 20px; }
 .panel-section h4 { font-size: 14px; color: #FFF6DA; margin-bottom: 8px; border-bottom: 1px solid rgba(255,246,218,0.2); padding-bottom: 4px; }
 /* P7+ 时间轴：参照原版 11-timeline.png + 设计文档 §3.4
