@@ -53,6 +53,7 @@ backend/admin-api/src/main/resources/passwd
 
 # --- Large image assets ---
 frontend/dashboard/public/img/*.png
+frontend/dashboard/public/road_network_image/  # 原版路网图 132MB（运行时由 vite 引用，不进 git）
 frontend/admin/dist/             # Vite 构建产物（dashboard 已 ignore dist/）
 
 # --- Editor temp files ---

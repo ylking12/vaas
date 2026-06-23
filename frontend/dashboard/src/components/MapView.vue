@@ -155,115 +155,82 @@ function clearMarkers(arr) {
 }
 
 let currentLayerType = null
-let overlayLayer = null
-let heatmap = null
+let overlayLayer = null  // AMap.ImageLayer (路网图)
 
-// 5 个气象站经纬度（来源：后端 VehicleEventService.java:197-200）
-const STATION_COORDS = [
-  { id: 1, name: '文惠路与锦绣路',     lng: 120.29628, lat: 31.68117 },
-  { id: 2, name: '贡湖大道与金城路口', lng: 120.4279,  lat: 31.5848  },
-  { id: 3, name: '运河西路',           lng: 120.281,   lat: 31.566   },
-  { id: 4, name: '机场路-泰山路',       lng: 120.3707,  lat: 31.541   },
-  { id: 5, name: '高浪路-兴梁道',       lng: 120.32034, lat: 31.5017  }
-]
-
-// API 基础地址（从 import.meta.env 取）
-const API_BASE = (import.meta.env.VITE_API_BASE || 'http://localhost:50410/spring/v1').replace(/\/+$/, '')
-
-// 根据图层类型 + 传感器数据计算 fillColor
-function getColorForLayer(type, d) {
-  switch (type) {
-    case 'dryWet': {
-      // 水层厚度越大越红（干燥=蓝/潮湿=黄/积水=红）
-      const t = d.waterLayerThickness || 0
-      if (t >= 1) return '#ff3333'   // 积水
-      if (t >= 0.1) return '#ffaa33' // 潮湿
-      return '#0096ff'               // 干燥
-    }
-    case 'friction': {
-      // 附着系数越小越红（高=绿/中=黄/低=红）
-      const g = d.levelOfGrip || 1
-      if (g < 0.5) return '#ff3333'
-      if (g < 0.7) return '#ffaa33'
-      return '#00cc66'
-    }
-    case 'temperature': {
-      // 路面温度（低=蓝/中=绿/高=红）
-      const t = d.roadSurfaceTemperature || 25
-      if (t < 10) return '#0066ff'
-      if (t < 25) return '#00cc66'
-      if (t < 35) return '#ffaa33'
-      return '#ff3333'
-    }
-    default:
-      return '#0096ff'
-  }
+// 图层类型 → 子目录映射（按原版命名）
+const LAYER_DIRS = {
+  dryWet: 'road_humidity',     // 干湿状态
+  friction: 'road_friction',   // 附着系数
+  temperature: 'road_temperature'  // 温度
 }
 
-// 清除所有覆盖图层
-function clearAllLayers() {
+// 无锡市路网 bounds（按原版：120.05, 31.36 - 120.60, 31.73，加 0.0002 偏移修正南北方向偏差）
+const WUXI_BOUNDS = [[120.05, 31.3598], [120.60, 31.7298]]
+
+// 当前时间轴值（1-25，对应 num 0,4,8,12,...,92）
+let currentTime = 24  // 默认 Now
+
+// 计算 num（按原版公式：curTime 1-24 → num 0-92 步长 4；curTime > 24 → 92）
+function calcNum(curTime) {
+  if (curTime > 24) return 92
+  return (curTime - 1) * 4
+}
+
+// 获取图层图片 URL
+function getImageSource(type, curTime) {
+  const dir = LAYER_DIRS[type]
+  if (!dir) return null
+  const num = calcNum(curTime)
+  const version = new Date().getTime()  // 防止缓存（按原版）
+  return `/road_network_image/${dir}/${num}.webp?v=${version}`
+}
+
+// 清除路网图
+function clearRoadNetLayer() {
   if (overlayLayer) {
-    if (Array.isArray(overlayLayer)) overlayLayer.forEach(p => p.setMap(null))
-    else overlayLayer.setMap(null)
+    map.remove(overlayLayer)
     overlayLayer = null
   }
-  if (heatmap) {
-    heatmap.setMap(null)
-    heatmap = null
+}
+
+// 加载路网图
+function loadRoadNet(type, curTime) {
+  clearRoadNetLayer()
+  const url = getImageSource(type, curTime)
+  if (!url) return
+  try {
+    overlayLayer = new AMap.ImageLayer({
+      bounds: new AMap.Bounds(WUXI_BOUNDS[0], WUXI_BOUNDS[1]),
+      opacity: 1,
+      zooms: [10, 15],
+      url
+    })
+    map.add(overlayLayer)
+    console.log(`[loadRoadNet] type=${type} curTime=${curTime} num=${calcNum(curTime)} url=${url}`)
+  } catch (err) {
+    console.error('[loadRoadNet] error:', err)
   }
 }
 
-// 拉取 5 站实时传感器数据
-async function fetchAllStationsSensor() {
-  const promises = STATION_COORDS.map(s =>
-    fetch(`${API_BASE}/get_real_time_sensor_data`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ road_name: String(s.id) })
-    })
-      .then(r => r.ok ? r.json() : null)
-      .catch(() => null)
-  )
-  const results = await Promise.all(promises)
-  return results.map((r, i) => ({ ...STATION_COORDS[i], ...(r || {}) }))
+// 设置当前时间（外部调用，触发图层按时间更新）
+function setCurrentTime(t) {
+  currentTime = t
+  if (currentLayerType) {
+    loadRoadNet(currentLayerType, currentTime)
+  }
 }
 
-// 真实数据图层：5 站 AMap.Circle，fillColor 按属性变色
-async function toggleLayer(type) {
-  // 清除现有
-  clearAllLayers()
-
+// 切换图层（外部调用）
+function toggleLayer(type) {
   if (!type || type === currentLayerType) {
+    // 关闭
+    clearRoadNetLayer()
     currentLayerType = null
     emit('layer-changed', null)
     return
   }
   currentLayerType = type
-
-  // 拉真实数据
-  let sensorData = []
-  try {
-    sensorData = await fetchAllStationsSensor()
-  } catch (e) {
-    console.error('fetchAllStationsSensor failed:', e)
-    return
-  }
-
-  // 5 站各画一个 AMap.Circle（真实坐标 + 真实属性变色）
-  const circles = sensorData.map(d => {
-    const fillColor = getColorForLayer(type, d)
-    const circle = new AMap.Circle({
-      center: [d.lng, d.lat],
-      radius: 1500,  // 1.5km
-      fillColor, fillOpacity: 0.4,
-      strokeColor: fillColor, strokeWeight: 2, strokeOpacity: 0.8
-    })
-    circle.setMap(map)
-    return circle
-  })
-
-  overlayLayer = circles
-  console.log(`[toggleLayer] ${type} - drew ${circles.length} real station circles`)
+  loadRoadNet(type, currentTime)
   emit('layer-changed', type)
 }
 
@@ -281,7 +248,7 @@ function locateTo(pos) {
   if (map) map.setCenter(pos)
 }
 
-defineExpose({ addVehicleMarkers, addEventMarkers, addStationMarkers, toggleLayer, showVehicleMarkers, clearAll, locateTo })
+defineExpose({ addVehicleMarkers, addEventMarkers, addStationMarkers, toggleLayer, showVehicleMarkers, clearAll, locateTo, setCurrentTime })
 
 onMounted(async () => {
   try {
