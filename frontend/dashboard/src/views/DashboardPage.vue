@@ -1,20 +1,7 @@
 <template>
   <div class="dashboard-root">
     <div class="top-bar">
-      <div class="top-left">
-        <span class="s-icon" @click="toggleDrawer" title="实时数据">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="7" height="7"/>
-            <rect x="14" y="3" width="7" height="7"/>
-            <rect x="3" y="14" width="7" height="7"/>
-            <rect x="14" y="14" width="7" height="7"/>
-          </svg>
-        </span>
-      </div>
       <div class="top-title">恶劣天气道路路面状态感知与预测系统</div>
-      <div class="top-right">
-        <el-button text @click="goBack">返回</el-button>
-      </div>
     </div>
     <div class="coloured-ribbon"></div>
     <div class="main-area">
@@ -221,8 +208,7 @@ watch(sliderValue, (newVal) => {
   loadMapEvents()
 })
 
-function goBack() { history.back() }
-// 方案 A''：toggle 显示/隐藏（点击 S / "实时数据" 都切换）
+// 方案 A''：toggle 显示/隐藏（点击 "实时数据" 切换）
 function toggleDrawer() { drawerVisible.value = !drawerVisible.value }
 
 const mapViewRef = ref(null)
@@ -458,10 +444,8 @@ onBeforeUnmount(() => {
 html, body, #app { width: 100%; height: 100%; overflow: hidden; font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
 .dashboard-root { width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; background: #020203; }
 .coloured-ribbon { height: 3px; width: 100%; background: linear-gradient(90deg, #32281e 0%, #6b4a25 25%, #c19a5b 50%, #FFF6DA 75%, #32281e 100%); }
-.top-bar { height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; z-index: 10; }
+.top-bar { height: 48px; display: flex; align-items: center; justify-content: center; padding: 0 16px; z-index: 10; }
 .top-title { font-size: 19.2px; font-weight: 500; color: #FFF6DA; letter-spacing: 2px; font-family: 'Noto Sans SC', sans-serif; }
-.s-icon { cursor: pointer; color: #FFF6DA; padding: 6px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; transition: background 0.2s; }
-.s-icon:hover { background: rgba(255, 246, 218, 0.1); }
 .main-area { flex: 1; position: relative; overflow: hidden; }
 /* P7+ 方案 A'：left-panel 永远 43px 折叠态（小弹窗删除）
    - hover 触发 openDrawer（不展开 left-panel）
