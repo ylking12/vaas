@@ -1,6 +1,6 @@
 # VaaS 项目复现 - 任务跟踪总表
 
-> 更新时间: 2026-06-23 (v22) | 全部待处理事项已收拢到此文件
+> 更新时间: 2026-06-23 (v23) | 全部待处理事项已收拢到此文件
 
 ## 进度概要
 
@@ -393,40 +393,39 @@ P7 后续任务 - 6/6 已完成 ✅
 
 ### P7-iter.7 网联车 marker 显示修复 + 位置仿真器（2026-06-23）
 
-**问题**：点"联网车辆"按钮后侧栏计数 = 5 但地图无 marker。
+**问题**：点"联网车辆"按钮后侧栏计数 = 5 但地图无 marker；之后即使加了 simulator 看不出来车在移动。
 
-**根因**（双层）：
-1. Redis 里 5 个 `vaas:vehicle:info:*` 的 timestamp 是 2026-06-12（早已过期），被 `LocationService.getOnlineVehicles()` 的 60s 检查过滤掉
-2. 即使数据有效，`DashboardPage.loadOnlineVehicles()` 也只更新 `onlineCount`，**没有**把数据传给 `MapView.addVehicleMarkers`
+**根因**（三层）：
+1. Redis 5 个 `vaas:vehicle:info:*` 的 timestamp 是 2026-06-12，被 `LocationService.getOnlineVehicles()` 的 60s 检查过滤掉
+2. `DashboardPage.loadOnlineVehicles()` 只更新 `onlineCount`，**没有**把数据传给 `MapView.addVehicleMarkers`
+3. `DashboardPage.toggleVehicles` 没有 timer 持续刷新 → marker 只在初次点按钮时建一次，之后位置不变
 
-**修复**（git 8476015）：
-- [DashboardPage.vue:417-433](frontend/dashboard/src/views/DashboardPage.vue#L417-L433) `loadOnlineVehicles()` 加字段归一化 + `mapViewRef.value?.addVehicleMarkers(vehicles)`：
-  ```js
-  const vehicles = Object.values(res).map(v => ({
-    lng: v.coordinates?.longitude, lat: v.coordinates?.latitude,
-    plate: v.plateNumber, speed: v.speed, deviceId: v.deviceId
-  }))
-  ```
+**修复**：
+- git 8476015：字段归一化 + `mapViewRef.value?.addVehicleMarkers(vehicles)`
+- git c80d58c：
+  - `toggleVehicles` 开启时启动 `vehicleTimer`（5s 间隔调 `loadOnlineVehicles`），关闭时清除
+  - `onBeforeUnmount` 清理 `vehicleTimer`
+- Simulator 步长改固定 30m/5s（经度 0.00032 / 纬度 0.00027），每辆车绑定一个轴向 + 初始方向模拟沿路直线行驶，speed=21.6 km/h
 
-**新增仿真器**（`simulator/python/vehicle_location_simulator.py`，136 行）：
-- 每 5s 给 5 个 key 推一次位置（沿方向漂移 ±0.0005 度，碰无锡 bounds 反向）
+**新增仿真器**（`simulator/python/vehicle_location_simulator.py`）：
+- 每 5s 给 5 个 key 推一次位置
 - 模拟 detector4kt 推送语义：`RPUSH` + `LTRIM -1 -1`（List 只保留最新 1 条）
 - 60s 内有效（被 LocationService 视为在线），后台跑：
   ```bash
   nohup python3 simulator/python/vehicle_location_simulator.py --interval 5 \
     > simulator/logs/vehicle_sim.log 2>&1 &
   ```
-- 停止：`kill $(cat /tmp/sim.pid)` 或 `pkill -f vehicle_location_simulator`
+- 停止：`pkill -f vehicle_location_simulator`
 
-**为什么不是 mock**：仿真器只往 Redis 写数据（与 detector4kt 推送完全一致），**不动 LocationService、RedisKeyConfig、FleetManagementComponent 任何业务代码**。Service 层真实逻辑判定为在线。
+**为什么不是 mock**：仿真器只往 Redis 写数据（与 detector4kt 推送完全一致），**不动 LocationService、RedisKeyConfig、FleetManagementComponent 任何业务代码**。
 
-**自检**（playwright）：
+**自检**（playwright `/location` API lng/lat 比对）：
 | 阶段 | 期望 | 实际 |
 |------|------|------|
 | `/location` API | 5 | 5 ✅ |
 | 点"联网车辆" → marker | 5 | 5 ✅ |
 | 取消 → marker | 0 | 0 ✅ |
-| lng/lat 随时间漂移 | 是 | 是 ✅（120.438 → 120.42 → 120.40）|
+| 12s 内 5/5 移动 | 是 | 是 ✅（lng/lat 各动 0.00064 = 2 步 × 30m）|
 
 ---
 
