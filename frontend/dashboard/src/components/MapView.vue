@@ -102,7 +102,9 @@ function addVehicleMarkers(vehicles) {
 }
 
 function addEventMarkers(events) {
+  lastEventData = events  // 缓存供 toggleEventMarkers 切换
   clearMarkers(eventMarkers)
+  eventMarkersVisible = true
   const colorMap = { bump: '#F56C6C', slip: '#E6A23C', ponding: '#409EFF', ice: '#67C23A', low_attachment: '#909399' }
   const labelMap = { bump: '颠', slip: '滑', ponding: '积', ice: '冰', low_attachment: '低' }
   eventMarkers = events.map(e => {
@@ -124,9 +126,21 @@ function addEventMarkers(events) {
       offset: new AMap.Pixel(-14, -14)
     })
     marker.on('click', () => emit('event-click', e))
-    marker.setMap(map)
+    if (eventMarkersVisible) marker.setMap(map)
     return marker
   })
+}
+
+// 切换事件 marker 显示/隐藏（路面积水颠簸事件按钮）
+function toggleEventMarkers() {
+  eventMarkersVisible = !eventMarkersVisible
+  if (eventMarkersVisible) {
+    // 显示：用缓存数据重画
+    if (lastEventData.length > 0) addEventMarkers(lastEventData)
+  } else {
+    // 隐藏：从地图移除
+    eventMarkers.forEach(m => m.setMap(null))
+  }
 }
 
 function addStationMarkers(active) {
@@ -154,20 +168,23 @@ function clearMarkers(arr) {
   arr.length = 0
 }
 
-// 修复 4 个问题：MapView 多图层叠加 + 降水/气象设备区分
+// 修复 5 个问题：'flood' 改为控制事件 marker（不是路网图）+ 关闭 drawer 不清空
 
 // 路网图：支持多图层叠加（key=type）
 const roadNetLayers = new Map()  // type -> AMap.ImageLayer
 
+// 事件 marker 缓存：保留最近一次 loadMapEvents 的数据，用于 toggleLayer('flood') 切换显示
+let lastEventData = []
+let eventMarkersVisible = true  // 默认显示（之前 B1 修复时 onMounted 调用 addEventMarkers）
+
 // 降水点 marker 独立存储（与 stationMarkers 区分）
 let precipMarkers = []
 
-// 图层类型 → 子目录映射（按原版命名）
+// 图层类型 → 子目录映射（按原版命名）— 'flood' 移除（不再当作路网图）
 const LAYER_DIRS = {
   dryWet: 'road_humidity',     // 干湿状态
   friction: 'road_friction',   // 附着系数
-  temperature: 'road_temperature',  // 温度
-  flood: 'road_humidity'       // 积水颠簸用干湿图（同原版——它本质上就是路面湿度/积水状态）
+  temperature: 'road_temperature'  // 温度
 }
 
 // 无锡市路网 bounds（按原版：120.05, 31.36 - 120.60, 31.73，加 0.0002 偏移修正南北方向偏差）
@@ -234,7 +251,14 @@ function setCurrentTime(t) {
 }
 
 // 切换图层（外部调用，支持多图层叠加 + toggle 关闭）
+// 特殊：type='flood' **不切换**事件 marker（按用户原话"图层不能消失"）
+//   → 只 emit layer-changed 让按钮高亮切换；marker 保持当前可见状态
 function toggleLayer(type) {
+  if (type === 'flood') {
+    // 不调 toggleEventMarkers（避免 marker 消失）
+    emit('layer-changed', type)
+    return
+  }
   if (!type) {
     // 清空所有
     clearAllRoadNetLayers()

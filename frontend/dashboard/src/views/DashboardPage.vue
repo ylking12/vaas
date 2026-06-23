@@ -218,24 +218,19 @@ watch(sliderValue, (newVal) => {
   mapViewRef.value?.setCurrentTime(newVal)
 })
 
-// 任务 2 修复：drawerVisible 变化时按当前 state 自动激活/关闭图层
-//  - 打开：根据 selectedLayer/selectedSpecial 调 toggleLayer
-//  - 关闭：清空地图图层（state 保留）
-//  - 用 nextTick 等待 mapViewRef.value 实际挂载（解决打开时 ref 为 null 的问题）
+// 任务 2 修复 + 关闭不清空：drawerVisible 变化时按当前 state 自动激活图层
+//  - 打开：只调 toggleLayer(selectedLayer)（路网图），**不**调 flood
+//  - flood 由用户点"路面积水颠簸事件"按钮自己 toggle（控制事件 marker）
+//  - 关闭：**不**清空地图内容
+//  - 用 nextTick 等待 mapViewRef.value 实际挂载
 import { nextTick } from 'vue'
 watch(drawerVisible, async (open) => {
   await nextTick()
-  if (open) {
-    if (selectedLayer.value) {
-      mapViewRef.value?.toggleLayer(selectedLayer.value)
-    }
-    if (selectedSpecial.value) {
-      mapViewRef.value?.toggleLayer('flood')
-    }
-  } else {
-    // 关闭抽屉：清空地图图层但保留 state（用户重开时再激活）
-    mapViewRef.value?.toggleLayer(null)
+  if (open && selectedLayer.value) {
+    // 只激活路网图层；事件 marker 保持当前可见状态（onMounted 默认显示）
+    mapViewRef.value?.toggleLayer(selectedLayer.value)
   }
+  // 关闭时不调任何清理
 })
 
 // 方案 A''：toggle 显示/隐藏（点击 "实时数据" 切换）
