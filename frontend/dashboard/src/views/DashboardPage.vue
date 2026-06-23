@@ -53,7 +53,19 @@
         <p class="time-suffix">未来1h</p>
       </div>
     </div>
-    <el-drawer v-model="drawerVisible" direction="ltr" size="100%" title="实时数据">
+    <!-- 参照原版实际 DOM (1690x1080, 88% 宽)：
+         - direction="rtl" 从右滑入覆盖左侧 88%，右侧 230px 留地图
+         - size="88%" 对应原版 1690/1920
+         - :modal="false" 关闭默认遮罩（drawer 自己有半透明背景）
+         - :with-header="true" 保留"实时数据"标题（原版有） -->
+    <el-drawer
+      v-model="drawerVisible"
+      direction="rtl"
+      size="88%"
+      :modal="false"
+      :with-header="true"
+      title="实时数据"
+    >
       <div class="drawer-grid">
         <div class="drawer-left">
           <LayerPanel
@@ -534,10 +546,13 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; font-family: 'No
 .time-slider .el-slider__runway .el-slider__button::after { display: none; }
 /* tooltip 样式 */
 .time-tooltip { font-weight: 700; }
-.drawer-grid { display: flex; gap: 16px; height: 100%; background: #090909; color: #FFF6DA; }
-.drawer-left { width: 240px; overflow-y: auto; padding: 8px; }
-.drawer-center { flex: 1; overflow-y: auto; padding: 8px; }
-.drawer-right { width: 260px; overflow-y: auto; padding: 8px; }
+/* 参照原版实际 DOM 尺寸 (1690x1080)：
+   左栏 422px + 中栏 634px + 右栏 634px = 1690px
+   高度 100% (1080)，gap=0（原版三栏紧密无间距）*/
+.drawer-grid { display: flex; gap: 0; height: 100%; color: #FFF6DA; }
+.drawer-left { width: 422px; overflow-y: auto; padding: 8px; }
+.drawer-center { width: 634px; overflow-y: auto; padding: 8px; }
+.drawer-right { width: 634px; overflow-y: auto; padding: 8px; }
 .sensor-cards { display: flex; gap: 8px; margin-top: 8px; }
 .sensor-card { flex: 1; background: rgba(255,246,218,0.05); border-radius: 6px; padding: 12px; text-align: center; cursor: pointer; border: 2px solid transparent; color: #FFF6DA; }
 .sensor-card.active { border-color: #FFF6DA; background: rgba(255,246,218,0.1); }
@@ -547,8 +562,11 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; font-family: 'No
 .stat-label { font-size: 12px; color: #a0a0a0; }
 .stat-number { font-size: 22px; font-weight: bold; color: #FFF6DA; }
 .stat-weather { font-size: 24px; margin: 8px 0; color: #FFF6DA; }
-/* Drawer dark theme overrides - Brown/Gold scheme */
-.el-drawer { background: #090909 !important; }
+/* Drawer dark theme overrides - 参照原版 DOM 实际 bg=rgba(0,0,0,0.6) 半透明黑
+   原版未设 backdrop-filter，按规则 1 还原度第一，不擅自加 blur */
+.el-drawer {
+  background: rgba(0, 0, 0, 0.6) !important;
+}
 .el-drawer__header { color: #FFF6DA !important; }
 .el-table { background: transparent !important; color: #FFF6DA !important; }
 .el-table th.el-table__cell { background: rgba(50,40,30,0.8) !important; color: #FFF6DA !important; }
