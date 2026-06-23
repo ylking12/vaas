@@ -1,6 +1,6 @@
 # VaaS 项目复现 - 任务跟踪总表
 
-> 更新时间: 2026-06-23 (v21) | 全部待处理事项已收拢到此文件
+> 更新时间: 2026-06-23 (v22) | 全部待处理事项已收拢到此文件
 
 ## 进度概要
 
@@ -13,7 +13,7 @@
 | P5 算法验证 | 2 | 2 | 0 | 0 | 100% ✅ |
 | P6 上线前整改 | 15 | 0 | 0 | 15 | 0% | 📋 已规划 |
 | **P7 大屏重构** | **37** | **37** | **0** | **0** | **100%** | ✅ 首版+3次迭代完成 |
-| **P7+ 后续迭代** | **5** | **5** | **0** | **0** | **100%** | ⬅️ 时间轴/drawer/B1/方案A'/flood-toggle 全完成 |
+| **P7+ 后续迭代** | **6** | **6** | **0** | **0** | **100%** | ⬅️ 时间轴/drawer/B1/方案A'/flood-toggle/网联车 全完成 |
 | **P8 工程优化** | **16** | **16** | **0** | **0** | **100%** | ✅ 红伤组+规范组+长线优化全完成 |
 | **合计** | **114** | **99** | **0** | **15** | **87%** | ⏳ 仅剩 P6 |
 
@@ -310,12 +310,13 @@ Phase 7 - 大屏重构 (33/33) ✅ 首版完成 + 1 次迭代
 ## P7+ 后续迭代（大屏持续完善）
 
 ```
-P7 后续任务 - 5/5 已完成 ✅
+P7 后续任务 - 6/6 已完成 ✅
 ├── 🎨 大屏样式调优 — 持续根据原版系统调整视觉细节
 │   ├── ✅ P7-iter.3 时间轴样式复原（2026-06-22，9 处修复，git c43ed8c）
 │   ├── ✅ P7-iter.4 drawer 弹框全屏 → 88% 宽半透明黑（2026-06-23，git 7f8c0e3）
 │   ├── ✅ P7-iter.5 方案 A' - hover/click 直接打开 drawer（移除小弹窗 2026-06-23）
-│   └── ✅ P7-iter.6 flood 按钮取消时清除事件 marker（2026-06-23，git b2e401c）
+│   ├── ✅ P7-iter.6 flood 按钮取消时清除事件 marker（2026-06-23，git b2e401c）
+│   └── ✅ P7-iter.7 网联车 marker 显示修复 + 位置仿真器（2026-06-23，git 8476015）
 ├── 🧪 微服务验证可视化 — 所有微服务（receiver/detector4kt/detector4motion/
 │   vaas-backend/admin-api/Python算法）的验证结果需要在大屏上展示
 │   - 服务健康状态
@@ -387,6 +388,45 @@ P7 后续任务 - 5/5 已完成 ✅
 | 3 | 选中 flood | 5 | >0 | ✅ |
 | 4 | 取消 flood | 0 | 0 | ✅ |
 | 5 | 重新选中 flood | 5 | >0 | ✅ |
+
+---
+
+### P7-iter.7 网联车 marker 显示修复 + 位置仿真器（2026-06-23）
+
+**问题**：点"联网车辆"按钮后侧栏计数 = 5 但地图无 marker。
+
+**根因**（双层）：
+1. Redis 里 5 个 `vaas:vehicle:info:*` 的 timestamp 是 2026-06-12（早已过期），被 `LocationService.getOnlineVehicles()` 的 60s 检查过滤掉
+2. 即使数据有效，`DashboardPage.loadOnlineVehicles()` 也只更新 `onlineCount`，**没有**把数据传给 `MapView.addVehicleMarkers`
+
+**修复**（git 8476015）：
+- [DashboardPage.vue:417-433](frontend/dashboard/src/views/DashboardPage.vue#L417-L433) `loadOnlineVehicles()` 加字段归一化 + `mapViewRef.value?.addVehicleMarkers(vehicles)`：
+  ```js
+  const vehicles = Object.values(res).map(v => ({
+    lng: v.coordinates?.longitude, lat: v.coordinates?.latitude,
+    plate: v.plateNumber, speed: v.speed, deviceId: v.deviceId
+  }))
+  ```
+
+**新增仿真器**（`simulator/python/vehicle_location_simulator.py`，136 行）：
+- 每 5s 给 5 个 key 推一次位置（沿方向漂移 ±0.0005 度，碰无锡 bounds 反向）
+- 模拟 detector4kt 推送语义：`RPUSH` + `LTRIM -1 -1`（List 只保留最新 1 条）
+- 60s 内有效（被 LocationService 视为在线），后台跑：
+  ```bash
+  nohup python3 simulator/python/vehicle_location_simulator.py --interval 5 \
+    > simulator/logs/vehicle_sim.log 2>&1 &
+  ```
+- 停止：`kill $(cat /tmp/sim.pid)` 或 `pkill -f vehicle_location_simulator`
+
+**为什么不是 mock**：仿真器只往 Redis 写数据（与 detector4kt 推送完全一致），**不动 LocationService、RedisKeyConfig、FleetManagementComponent 任何业务代码**。Service 层真实逻辑判定为在线。
+
+**自检**（playwright）：
+| 阶段 | 期望 | 实际 |
+|------|------|------|
+| `/location` API | 5 | 5 ✅ |
+| 点"联网车辆" → marker | 5 | 5 ✅ |
+| 取消 → marker | 0 | 0 ✅ |
+| lng/lat 随时间漂移 | 是 | 是 ✅（120.438 → 120.42 → 120.40）|
 
 ---
 
