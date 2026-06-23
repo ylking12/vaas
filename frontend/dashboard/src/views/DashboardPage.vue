@@ -202,10 +202,12 @@ const sliderMarks = computed(() => {
   return m
 })
 
-// 时间轴联动：拖动时只刷新地图事件标记（§3.5）
-// 告警列表不联动（drawer 全屏覆盖时间轴，且语义上无关）
+// 时间轴联动：拖动时刷新地图事件标记 + 路网图（§3.5 + 方案 A 扩展）
+//  - loadMapEvents：5 个 API 按 hour 参数重查（联动事件 marker）
+//  - setCurrentTime：通知 MapView 重新加载对应 num 的路网 .webp
 watch(sliderValue, (newVal) => {
   loadMapEvents()
+  mapViewRef.value?.setCurrentTime(newVal)
 })
 
 // 方案 A''：toggle 显示/隐藏（点击 "实时数据" 切换）
