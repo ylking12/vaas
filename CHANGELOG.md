@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - 8.10 后端 OpenAPI/Swagger 文档 (vaas-backend)
 - 8.16 后端 Actuator 健康检查端点 (5 个微服务)
+- **P7-iter.8 原版 PNG 图标替换**：MapView marker 全部改用原版资源
+  - 新增 `scripts/extract-original-icons.js`：从原版 webpack bundle 提取 base64/file-loader 图标
+  - 新增 `frontend/dashboard/src/assets/img/{车辆×2 / event×9 / roadside×3 / layer×6 / 其它×9}` 共 29 个原版 PNG/GIF
+  - 新增 `vite.config.js` `@/` 别名，沿用原版 Vue 2 import 风格
+
+### Changed
+- **P7-iter.8** `MapView.vue`：4 类 marker（车辆/事件/气象站/降水点）改用原版 PNG，删除内嵌 SVG 字符串和脉冲动画 CSS
+  - 颠簸/湿滑/积水：32×32（用 `event_marker_icon_*_2_gray.png` 80×80 缩放）
+  - 气象站：24×24（用 `roadside_marker_icon_dsc211.png`）
+  - 降水点：24×24（用 `event_marker_icon_06.png`/rainIcon）
+  - 车辆：36×36，按 `isTrue` 选 `car_true.png` / `car.png`
+  - marker img 尺寸用 inline style（scoped CSS 对 `createElement` DOM 不生效，详见 LESSONS #007）
 
 ## [0.15.0] - 2026-06-12
 

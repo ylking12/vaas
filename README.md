@@ -132,6 +132,7 @@ open http://localhost:8082
 | `logs.sh` | `bash scripts/logs.sh [服务名] [-f] [-n N]` | 日志查看/跟踪。`-f` 实时跟踪；`-n N` 显示最近 N 行 |
 | `init-db.sh` | `bash scripts/init-db.sh` | 数据库初始化（执行 `init-db.sql`） |
 | `inject-data.sh` | `bash scripts/inject-data.sh` | 模拟数据注入（Redis / WebSocket 双模式） |
+| `extract-original-icons.js` | `node scripts/extract-original-icons.js` | 从原版 webpack bundle 提取 base64/file-loader 图标资源到 `frontend/dashboard/src/assets/img/`（P7-iter.8 用，一次性脚本） |
 
 ### 常用示例
 

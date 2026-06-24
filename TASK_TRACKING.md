@@ -1,6 +1,6 @@
 # VaaS 项目复现 - 任务跟踪总表
 
-> 更新时间: 2026-06-23 (v23) | 全部待处理事项已收拢到此文件
+> 更新时间: 2026-06-24 (v24) | 全部待处理事项已收拢到此文件
 
 ## 进度概要
 
@@ -13,7 +13,7 @@
 | P5 算法验证 | 2 | 2 | 0 | 0 | 100% ✅ |
 | P6 上线前整改 | 15 | 0 | 0 | 15 | 0% | 📋 已规划 |
 | **P7 大屏重构** | **37** | **37** | **0** | **0** | **100%** | ✅ 首版+3次迭代完成 |
-| **P7+ 后续迭代** | **6** | **6** | **0** | **0** | **100%** | ⬅️ 时间轴/drawer/B1/方案A'/flood-toggle/网联车 全完成 |
+| **P7+ 后续迭代** | **7** | **7** | **0** | **0** | **100%** | ⬅️ 时间轴/drawer/B1/方案A'/flood-toggle/网联车/原版图标 全完成 |
 | **P8 工程优化** | **16** | **16** | **0** | **0** | **100%** | ✅ 红伤组+规范组+长线优化全完成 |
 | **合计** | **114** | **99** | **0** | **15** | **87%** | ⏳ 仅剩 P6 |
 
@@ -310,13 +310,14 @@ Phase 7 - 大屏重构 (33/33) ✅ 首版完成 + 1 次迭代
 ## P7+ 后续迭代（大屏持续完善）
 
 ```
-P7 后续任务 - 6/6 已完成 ✅
+P7 后续任务 - 7/7 已完成 ✅
 ├── 🎨 大屏样式调优 — 持续根据原版系统调整视觉细节
 │   ├── ✅ P7-iter.3 时间轴样式复原（2026-06-22，9 处修复，git c43ed8c）
 │   ├── ✅ P7-iter.4 drawer 弹框全屏 → 88% 宽半透明黑（2026-06-23，git 7f8c0e3）
 │   ├── ✅ P7-iter.5 方案 A' - hover/click 直接打开 drawer（移除小弹窗 2026-06-23）
 │   ├── ✅ P7-iter.6 flood 按钮取消时清除事件 marker（2026-06-23，git b2e401c）
-│   └── ✅ P7-iter.7 网联车 marker 显示修复 + 位置仿真器（2026-06-23，git 8476015）
+│   ├── ✅ P7-iter.7 网联车 marker 显示修复 + 位置仿真器（2026-06-23，git 8476015）
+│   └── ✅ P7-iter.8 原版 PNG 图标替换（2026-06-24，从原版 JS bundle 提取 29 个图标）
 ├── 🧪 微服务验证可视化 — 所有微服务（receiver/detector4kt/detector4motion/
 │   vaas-backend/admin-api/Python算法）的验证结果需要在大屏上展示
 │   - 服务健康状态
@@ -426,6 +427,76 @@ P7 后续任务 - 6/6 已完成 ✅
 | 点"联网车辆" → marker | 5 | 5 ✅ |
 | 取消 → marker | 0 | 0 ✅ |
 | 12s 内 5/5 移动 | 是 | 是 ✅（lng/lat 各动 0.00064 = 2 步 × 30m）|
+
+---
+
+### P7-iter.8 原版 PNG 图标替换（2026-06-24）
+
+**问题**：P7-iter.2.2 时为快速起步用了内嵌 SVG 自绘车辆/事件/气象站图标，与原版视觉差异较大。
+
+**调研发现**：
+- 原版前端项目位置：[/前端代码/www/](../前端代码/www/)（Vue 2 + Webpack）
+- 原版 dashboard 主入口 [src_views_dashboard_vue.68d9af79.js](../前端代码/www/js/src_views_dashboard_vue.68d9af79.js) 引用了 ~16 个 marker PNG
+- 这些 PNG **全部被 webpack 通过 url-loader inline 成 base64 嵌入** [src_assets_css_alarm_*chunk*.js](../前端代码/www/js/) 模块定义中
+- 5 个大尺寸背景图（1111/bird/headImg/left_bg/rr_bg）走 file-loader，存在 `www/img/`
+
+**实施**：
+
+1. **写图标提取脚本** [scripts/extract-original-icons.js](scripts/extract-original-icons.js)：
+   - 按 module key 切段，每段独立匹配 eval 内容（避免 regex 跨段错位）
+   - 同时处理两种格式：`base64 inline` + `file-loader 路径`
+   - 29/29 图标全部提取成功（24 base64 + 5 file-loader copy）
+
+2. **提取产物** → [frontend/dashboard/src/assets/img/](frontend/dashboard/src/assets/img/)：
+
+   | 子目录 | 文件 | 用途 |
+   |--------|------|------|
+   | (根) | `car.png` (18×40) | 默认车辆 |
+   | (根) | `car_true.png` (90×90) | 第三方车队真实车辆 |
+   | `event/` | `event_marker_icon_bumpy_2_gray.png` | 颠簸（基础灰）|
+   | `event/` | `bump-icon-3/5/7.png` | 颠簸 Level 3/5/7 三档 |
+   | `event/` | `event_marker_icon_slippery_2_gray.png` | 湿滑 |
+   | `event/` | `event_marker_icon_water_2_gray.png` | 积水 |
+   | `event/` | `event_marker_icon_06.png` | 降水/雨（rainIcon）|
+   | `event/` | `event_icon_01/02.png` | 事件列表小图标 |
+   | `roadside/` | `roadside_marker_icon_dsc211.png` | DSC211 路侧主机 |
+   | `roadside/` | `event_marker_icon_sr50a.png` | SR50A 雨量计 |
+   | `roadside/` | `event_marker_icon_wxt536.png` | WXT536 气象站 |
+   | `layer/` | `layer_icon_02..07.png` | 6 个图层按钮图标 |
+   | (其它) | `coloured-ribbon`/`friction-0/1`/`slider_btn`/背景图 ×5 | 其它资产 |
+
+3. **改造 [MapView.vue](frontend/dashboard/src/components/MapView.vue)**：
+   - 删掉 `VEHICLE_SVG` / `eventMarkerSvg(color)` / `STATION_SVG` 三个 SVG 字符串和脉冲动画 CSS
+   - 改用 `import` 引入 13 个原版 PNG
+   - `addVehicleMarkers`：按 `v.isTrue` 字段选 `car_true.png` / `car.png`
+   - `addEventMarkers`：按 `eventType` + `level` 选图标
+     - `bump` + level≥6 → `bump-icon-7`；level≥4 → `bump-icon-5`；其他 → `bump-icon-3`
+     - `bump` 无 level → `event_marker_icon_bumpy_2_gray`
+     - `slip` → `event_marker_icon_slippery_2_gray`
+     - `ponding` → `event_marker_icon_water_2_gray`
+   - `addStationMarkers`：按 `s.type` 选（dsc211/sr50a/wxt536），默认 `dsc211`
+   - `addPrecipPoints`：用 `event_marker_icon_06.png`（rainIcon）
+
+4. **新增 vite 别名** [vite.config.js](frontend/dashboard/vite.config.js)：`@/` 指向 `src/`（沿用原版 Vue 2 项目 import 风格）
+
+**自检**（playwright `/tmp/verify-iter8-icons.js`）：
+
+| 阶段 | marker 数量 | src 路径 | 原版尺寸 |
+|------|-------------|---------|---------|
+| 车辆 | 5/5 ✅ | `img/car.png` | 18×40 ✅ |
+| 气象站 | 5/5 ✅ | `roadside/roadside_marker_icon_dsc211.png` | 80×80 ✅ |
+| 降水点 | 5/5 ✅ | `event/event_marker_icon_06.png` | 80×80 ✅ |
+| 事件 | 0（Redis 未起）| import 路径已通过构建验证 | - |
+| 构建 | npm run build 2.78s 通过 | - | - |
+
+**已知与原版差异**：
+- 原版气象站可能根据 `type` 字段（DSC211/SR50A/WXT536）显示 3 种不同图标，目前我们的 STATIONS 5 个站固定用 DSC211 — 后续如果 API 返回 type 字段可自动切换
+- 颠簸 Level 在测试事件中映射规则：3→bump-icon-3, 4-5→bump-icon-5, ≥6→bump-icon-7（按原版算法 Level 0/3/5/7 阈值推测，未与原始 BumpyProcessor4Motion 严格交叉验证）
+
+**关于 dist/icon/ 4 个 SVG**（之前以为是 P7 自创）：
+- 实际从原版 `/前端代码/www/icon/` 直接拷贝过来（`diff -q` 完全一致）
+- 但原版 dashboard 主入口 JS/CSS **均未引用**它们，疑为历史残留或备用
+- 决定保留（属于原版资源完整性）
 
 ---
 

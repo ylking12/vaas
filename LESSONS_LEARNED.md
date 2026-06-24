@@ -88,13 +88,41 @@
 
 ---
 
+### #007 Vue scoped CSS 不作用于 createElement 生成的 DOM
+
+| 项目 | 内容 |
+|------|------|
+| **发现日期** | 2026-06-24 |
+| **来源任务** | P7-iter.8 原版 PNG 图标替换 |
+| **严重程度** | 🟡 中（视觉问题，被自检挡住） |
+| **问题描述** | `MapView.vue` 中 marker DOM 由 `document.createElement('div')` + `el.innerHTML = '<img src=...>'` 创建（高德地图 Marker 的 `content` 参数约定）。在 `<style scoped>` 中写的 `.station-marker img { width: 24px }` 完全不生效，img 仍按 naturalWidth 80×80 显示。playwright 抓 DOM 才发现：scoped CSS 编译后 selector 变成 `.station-marker[data-v-xxx] img`，但 `createElement` 出的 DOM 没有 `data-v-xxx` 属性，所以选不中。 |
+| **根因分析** | Vue scoped CSS 通过编译期给模板节点加 `data-v-<hash>` 属性 + 给选择器加同名属性约束实现作用域隔离。`createElement` 是运行时纯 DOM API，Vue 编译器看不见，自然不给它加 hash。**所有用 `createElement` 注入到第三方组件（地图/图表/插槽 portal）的 DOM，scoped CSS 都不作用**。 |
+| **解决方案** | ① **inline style 直接写在 `<img style="...">`** — 简单可靠，本次采用 ② 改用 `<style>` 全局（不带 scoped）+ 唯一类名前缀 ③ 用 `:deep()` 但仍需挂载点在 Vue 模板内 |
+| **预防措施** | ① 凡是 `createElement('div').innerHTML = ...` 的代码，**默认 scoped CSS 不生效**，尺寸/颜色等关键样式优先走 inline style ② 视觉验证不能只看代码改对了，必须 playwright `clientWidth/clientHeight` 实测 — 本次差点漏过 ③ 文件头注释里**显式提醒**"marker DOM 由 createElement 创建，scoped 不生效" |
+
+---
+
+### #008 正则跨段错位匹配（工程教训）
+
+| 项目 | 内容 |
+|------|------|
+| **发现日期** | 2026-06-24 |
+| **来源任务** | P7-iter.8 `scripts/extract-original-icons.js` |
+| **严重程度** | 🟡 中（差点写入错位的 base64 文件） |
+| **问题描述** | 第一版提取脚本用 `/"(\.\/src\/assets\/img\/[^"]+)":[\s\S]+?eval\(...\)/g` 一次性匹配所有图标模块。结果跑出 24 个文件但**全部错位**：`1111.png` 写入的实际是 `car.png` 的 base64 数据，因为 1111.png 自己是 file-loader 格式（不匹配 base64 正则），引擎 backtrack 时 `[\s\S]+?` 吃过中间模块直到下一个 base64 模块，但捕获组 1 仍是开头那个 key。 |
+| **根因分析** | regex 全局匹配 + `[\s\S]+?` lazy 量词没有"段边界感知"。当中间有不匹配格式的模块时，会跨越多个模块定义找最近的可匹配 eval，造成 key 和 data 错位。**这类 bug 不会报错**，文件能写成功，肉眼也看不出，只有视觉验证才能暴露。 |
+| **解决方案** | ① 重写：**先按 module key 切段**（`splitModules` 函数），每段独立 match eval 内容 ② 同时区分 base64 inline / file-loader 两种格式 ③ 添加调试输出（"切出 N 个模块段"对比期望值） |
+| **预防措施** | ① 解析有"明确分段标记"的文本时，**先切段再每段独立解析**，不要依赖 lazy 量词在整文中漂移 ② 文件批量提取后**必须随机抽样视觉验证**至少 2-3 个文件，看像不像该文件名描述的内容 ③ 重要的解析器加段数断言（"应有 N 段，实际 M 段，不一致就报错"）|
+
+---
+
 | 类别 | 出现次数 | 占比 |
 |------|---------|------|
 | 信息不完整导致计划偏差 | 1 | 12% |
 | 执行策略错误 | 2 | 25% |
 | 沟通遗漏 | 2 | 25% |
-| **诚信违规** | **1** | **12%** | 🆕
-| 工具/环境问题 | 0 | 0% |
+| **诚信违规** | **1** | **12%** |
+| 框架/工具陷阱 | **2** | **25%** | 🆕
 
 ---
 

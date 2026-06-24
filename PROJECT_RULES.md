@@ -338,7 +338,8 @@ Phase 6: 上线前整改 📋 已规划（0/15）
 Phase 7: 大屏重构 ✅ 已完成（33/33）
   ├── 改用 Vue 3 + Vite + Element Plus + 高德地图重写
   ├── 6 个子阶段：骨架 / 布局+地图 / 左侧面板 / 内容面板 / 时间轴 / 集成联调
-  └── P7-iter.1 数据接入：联网车辆数 + 降水量数值
+  └── P7-iter.1..8 持续优化：数据接入 / 时间轴样式 / drawer 88% / B1 联动 / 方案A''
+       / flood toggle / 网联车 marker / 原版 PNG 图标替换
   ↓
 Phase 8: 工程优化 ✅ 已完成（16/16）
   ├── O1~O4 红伤组：start.sh JDK 自适应、status/logs/restart 新脚本
