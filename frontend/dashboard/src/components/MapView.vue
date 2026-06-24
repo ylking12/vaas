@@ -5,6 +5,24 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 
+// P7-iter.8: 原版 PNG 图标资源（来自 scripts/extract-original-icons.js 从原版 JS bundle 提取）
+//   车辆: car.png（默认/未确认）, car_true.png（第三方车队真实车辆）
+//   事件: bumpy/slippery/water_2_gray.png（基础灰色），bump-icon-3/5/7 颠簸分级
+//   降水: event_marker_icon_06.png（rainIcon）
+//   气象站/路侧: roadside_marker_icon_dsc211.png, event_marker_icon_sr50a.png, event_marker_icon_wxt536.png
+import carIcon from '@/assets/img/car.png'
+import carTrueIcon from '@/assets/img/car_true.png'
+import bumpyIcon from '@/assets/img/event/event_marker_icon_bumpy_2_gray.png'
+import bumpyLevel3 from '@/assets/img/event/bump-icon-3.png'
+import bumpyLevel5 from '@/assets/img/event/bump-icon-5.png'
+import bumpyLevel7 from '@/assets/img/event/bump-icon-7.png'
+import slipperyIcon from '@/assets/img/event/event_marker_icon_slippery_2_gray.png'
+import waterIcon from '@/assets/img/event/event_marker_icon_water_2_gray.png'
+import rainIcon from '@/assets/img/event/event_marker_icon_06.png'
+import stationDSC211 from '@/assets/img/roadside/roadside_marker_icon_dsc211.png'
+import stationSR50A from '@/assets/img/roadside/event_marker_icon_sr50a.png'
+import stationWXT536 from '@/assets/img/roadside/event_marker_icon_wxt536.png'
+
 const mapContainer = ref(null)
 const emit = defineEmits(['map-ready'])
 
@@ -39,61 +57,45 @@ function loadAMap() {
   })
 }
 
-// P7-iter.2-2: 车辆/事件/气象站标记重做，使用内嵌 SVG + CSS 动画
+// P7-iter.8: 原版 marker 用 PNG 图标，不再用内嵌 SVG
+//   - 车辆: 90×90 → 显示 36×36（缩小 0.4x，避免遮盖地图）
+//   - 事件: 80×80 → 显示 32×32
+//   - 气象站: 80×80 → 显示 32×32
 
-// 车辆图标 SVG（简洁车型：圆角车身 + 方向三角）
-const VEHICLE_SVG = `
-<svg xmlns="http://www.w3.org/2000/svg" width="36" height="20" viewBox="0 0 36 20">
-  <defs>
-    <linearGradient id="vg" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#32281e"/>
-      <stop offset="1" stop-color="#FFF6DA"/>
-    </linearGradient>
-  </defs>
-  <path d="M3 14 L4 6 Q5 4 8 4 L28 4 Q31 4 32 6 L33 14 Z" fill="url(#vg)" stroke="#1a1a1a" stroke-width="1"/>
-  <polygon points="29,9 33,9 31,13" fill="#FFF6DA"/>
-  <circle cx="9" cy="16" r="2.5" fill="#1a1a1a"/>
-  <circle cx="27" cy="16" r="2.5" fill="#1a1a1a"/>
-</svg>
-`
+// 颠簸 level → 图标映射（按算法等级）
+//   bump-icon-3/5/7.png 是 12×12 等级条，用于事件列表标签，不适合作 marker
+//   marker 统一用 event_marker_icon_bumpy_2_gray.png（80×80），level 只作 tooltip 信息
+function getBumpyIconByLevel(_level) {
+  return bumpyIcon
+}
 
-// 事件标记 SVG（中心点 + 脉冲环）
-const eventMarkerSvg = (color) => `
-<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
-  <circle class="pulse-ring" cx="14" cy="14" r="13" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.6"/>
-  <circle cx="14" cy="14" r="6" fill="${color}" stroke="#fff" stroke-width="1.5"/>
-  <circle cx="14" cy="14" r="2.5" fill="#fff"/>
-</svg>
-`
-
-// 气象站图标 SVG（塔形 + 信号环）
-const STATION_SVG = `
-<svg xmlns="http://www.w3.org/2000/svg" width="26" height="32" viewBox="0 0 26 32">
-  <defs>
-    <radialGradient id="sg" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#67C23A" stop-opacity="0.9"/>
-      <stop offset="1" stop-color="#67C23A" stop-opacity="0.3"/>
-    </radialGradient>
-  </defs>
-  <circle cx="13" cy="20" r="11" fill="url(#sg)"/>
-  <rect x="11" y="3" width="4" height="22" rx="1" fill="#1a1a1a" stroke="#67C23A" stroke-width="1.5"/>
-  <circle cx="13" cy="6" r="2.5" fill="#67C23A" stroke="#fff" stroke-width="1"/>
-  <path d="M6 28 L20 28" stroke="#67C23A" stroke-width="2" stroke-linecap="round"/>
-  <text x="13" y="13" text-anchor="middle" font-size="6" fill="#fff" font-family="Arial">°C</text>
-</svg>
-`
+// 事件类型 → 图标映射
+//   bump=颠簸（按 level 分级）, slip=湿滑, ponding=积水
+//   ice/low_attachment 等扩展类型暂用 slippery 兼容
+function getEventIcon(eventType, level) {
+  switch (eventType) {
+    case 'bump': return getBumpyIconByLevel(level)
+    case 'slip': return slipperyIcon
+    case 'ponding': return waterIcon
+    case 'ice':
+    case 'low_attachment': return slipperyIcon
+    default: return bumpyIcon
+  }
+}
 
 function addVehicleMarkers(vehicles) {
   clearMarkers(vehicleMarkers)
   vehicleMarkers = vehicles.map(v => {
+    // 按 isTrue 字段选图标（原版语义：true=第三方车队真实车辆 car_true.png；false=未认证车辆 car.png）
+    const iconUrl = v.isTrue ? carTrueIcon : carIcon
     const el = document.createElement('div')
     el.className = 'vehicle-marker'
-    el.innerHTML = VEHICLE_SVG
     el.title = v.plate || '车辆'
+    el.innerHTML = `<img src="${iconUrl}" alt="vehicle" draggable="false" style="width:36px;height:36px;object-fit:contain;display:block" />`
     const marker = new AMap.Marker({
       position: [v.lng, v.lat],
       content: el,
-      offset: new AMap.Pixel(-18, -10)
+      offset: new AMap.Pixel(-18, -18)
     })
     marker.on('click', () => emit('vehicle-click', v))
     marker.setMap(map)
@@ -105,25 +107,18 @@ function addEventMarkers(events) {
   lastEventData = events  // 缓存供 toggleEventMarkers 切换
   clearMarkers(eventMarkers)
   eventMarkersVisible = true
-  const colorMap = { bump: '#F56C6C', slip: '#E6A23C', ponding: '#409EFF', ice: '#67C23A', low_attachment: '#909399' }
-  const labelMap = { bump: '颠', slip: '滑', ponding: '积', ice: '冰', low_attachment: '低' }
   eventMarkers = events.map(e => {
-    const color = colorMap[e.eventType] || '#F56C6C'
+    // 按事件类型 + 颠簸 level 选图标（原版语义）
+    const iconUrl = getEventIcon(e.eventType, e.level)
     const el = document.createElement('div')
     el.className = 'event-marker'
     el.setAttribute('data-type', e.eventType)
-    el.setAttribute('data-color', color)
-    el.title = `${e.eventType || '事件'} - ${e.eventTime || ''}`
-    el.innerHTML = `
-      <div class="event-pulse" style="background:${color}"></div>
-      <div class="event-core" style="background:${color}">
-        <span class="event-label">${labelMap[e.eventType] || '!'}</span>
-      </div>
-    `
+    el.title = `${e.eventType || '事件'}${e.level != null ? ' L' + e.level : ''} - ${e.eventTime || ''}`
+    el.innerHTML = `<img src="${iconUrl}" alt="event" draggable="false" style="width:32px;height:32px;object-fit:contain;display:block" />`
     const marker = new AMap.Marker({
       position: [e.longitude || e.lng, e.latitude || e.lat],
       content: el,
-      offset: new AMap.Pixel(-14, -14)
+      offset: new AMap.Pixel(-16, -16)
     })
     marker.on('click', () => emit('event-click', e))
     if (eventMarkersVisible) marker.setMap(map)
@@ -151,19 +146,32 @@ function toggleEventMarkers() {
   }
 }
 
+// 气象站类型 → 图标映射（原版有 3 种：DSC211 路侧主机 / SR50A 雨量计 / WXT536 气象站）
+// 当前 STATIONS 5 个站没有 type 字段，默认全部用 DSC211（路侧主机最常见）
+// 后续如果数据中带 type 字段，按 type 切换
+function getStationIcon(stationType) {
+  switch (stationType) {
+    case 'sr50a': return stationSR50A
+    case 'wxt536': return stationWXT536
+    case 'dsc211':
+    default: return stationDSC211
+  }
+}
+
 function addStationMarkers(active) {
   clearMarkers(stationMarkers)
   const list = active ? STATIONS : []
   stationMarkers = list.map(s => {
+    const iconUrl = getStationIcon(s.type)
     const el = document.createElement('div')
     el.className = 'station-marker'
-    el.innerHTML = STATION_SVG
     el.title = s.name
     el.style.cursor = 'pointer'
+    el.innerHTML = `<img src="${iconUrl}" alt="station" draggable="false" style="width:24px;height:24px;object-fit:contain;display:block" />`
     const marker = new AMap.Marker({
       position: s.pos,
       content: el,
-      offset: new AMap.Pixel(-13, -28)
+      offset: new AMap.Pixel(-12, -12)
     })
     marker.on('click', () => emit('station-click', s))
     marker.setMap(map)
@@ -281,10 +289,10 @@ function toggleLayer(type) {
 }
 
 // 降水点：5 个区质心（/get-rain-points 数据，null 时用 5 个气象站位置降级）
-// 视觉与气象设备（addStationMarkers 用 STATION_SVG 白色）区分：蓝色水滴占位
+// P7-iter.8: 用原版 event_marker_icon_06.png (rainIcon)，与气象设备 DSC211 区分
 function addPrecipPoints(points) {
   clearPrecipPoints()
-  // 降级方案：后端返回 null 时用 STATIONS 的 5 个位置（用户后续给图标替换）
+  // 降级方案：后端返回 null 时用 STATIONS 的 5 个位置
   const list = (points && points.length > 0)
     ? points
     : STATIONS.map(s => ({
@@ -296,9 +304,8 @@ function addPrecipPoints(points) {
   precipMarkers = list.map(p => {
     const el = document.createElement('div')
     el.className = 'precip-marker'
-    el.innerHTML = '💧'  // 占位：用户后续给图标
     el.title = `${p.name || '降水点'}: ${p.intensity || 0}mm`
-    el.style.cssText = 'background:rgba(0,150,255,0.85);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid #fff;box-shadow:0 0 6px rgba(0,150,255,0.6)'
+    el.innerHTML = `<img src="${rainIcon}" alt="rain" draggable="false" style="width:24px;height:24px;object-fit:contain;display:block" />`
     const marker = new AMap.Marker({
       position: [p.longitude, p.latitude],
       content: el,
@@ -356,56 +363,21 @@ onBeforeUnmount(() => { if (map) map.destroy() })
 <style scoped>
 .map-wrapper { width: 100%; height: 100%; }
 
-/* P7-iter.2-2: 地图标记样式 */
-.vehicle-marker {
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
-  transition: transform 0.15s;
+/* P7-iter.8: 原版 PNG marker 容器样式
+   注意：marker DOM 由 createElement 创建，不在 Vue 模板渲染范围，
+   故 img 尺寸必须用 inline style 设置（scoped CSS 选不中）*/
+.vehicle-marker,
+.event-marker,
+.station-marker,
+.precip-marker {
   cursor: pointer;
-}
-.vehicle-marker:hover { transform: scale(1.15); }
-
-.event-marker {
-  position: relative;
-  width: 28px;
-  height: 28px;
-  cursor: pointer;
-}
-.event-pulse {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  opacity: 0.4;
-  animation: event-pulse 1.8s ease-out infinite;
-}
-.event-core {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  border: 2px solid #fff;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.event-label {
-  font-size: 11px;
-  font-weight: bold;
-  color: #fff;
-  line-height: 1;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-@keyframes event-pulse {
-  0%   { transform: scale(0.6); opacity: 0.7; }
-  100% { transform: scale(2.0); opacity: 0; }
-}
-
-.station-marker {
-  filter: drop-shadow(0 2px 6px rgba(103, 194, 58, 0.5));
   transition: transform 0.15s;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
 }
-.station-marker:hover { transform: scale(1.1); }
+.vehicle-marker:hover,
+.event-marker:hover,
+.station-marker:hover,
+.precip-marker:hover {
+  transform: scale(1.15);
+}
 </style>
