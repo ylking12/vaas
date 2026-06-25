@@ -105,30 +105,62 @@
         <div class="drawer-right">
           <div class="panel-section">
             <h4>服务统计数据</h4>
-            <p class="stat-value">{{ rcsData.coveredArea }} km²</p>
-            <p class="stat-label">路况感知覆盖范围</p>
-            <p class="stat-weather">{{ (weatherData.text && weatherData.text !== '0') ? weatherData.text : '--' }}</p>
+            <!-- 原版两栏布局：左=覆盖范围+雷达图标，右=天气+云图标 -->
+            <div class="stats-top-row">
+              <div class="stats-coverage">
+                <p class="stat-value-cyan">{{ rcsData.coveredArea }} km²</p>
+                <div class="stats-coverage-icon">
+                  <svg viewBox="0 0 48 48" width="36" height="36" fill="none" stroke="#4FC3F7" stroke-width="1.5">
+                    <circle cx="24" cy="24" r="18"/>
+                    <circle cx="24" cy="24" r="12"/>
+                    <circle cx="24" cy="24" r="6"/>
+                    <line x1="24" y1="2" x2="24" y2="8"/>
+                    <line x1="24" y1="40" x2="24" y2="46"/>
+                    <line x1="2" y1="24" x2="8" y2="24"/>
+                    <line x1="40" y1="24" x2="46" y2="24"/>
+                  </svg>
+                </div>
+                <p class="stat-label">路况感知覆盖范围</p>
+              </div>
+              <div class="stats-weather">
+                <div class="stats-weather-icon">
+                  <svg viewBox="0 0 48 48" width="36" height="36" fill="none" stroke="#FFF6DA" stroke-width="1.5">
+                    <path d="M12 28a10 10 0 0 1 10-10 10 10 0 0 1 9.5 6.5A7 7 0 0 1 38 32a7 7 0 0 1-7 7H14a8 8 0 0 1-2-15.8z"/>
+                  </svg>
+                </div>
+                <p class="weather-temp">{{ weatherData.temp || '--' }}°C</p>
+              </div>
+            </div>
             <el-divider />
-            <p>最近24h内颠簸路面个数</p>
-            <p class="stat-number">{{ summaryData.num_bumpyroad }}</p>
-            <p>最近24h内湿滑路面个数</p>
-            <p class="stat-number">{{ summaryData.num_wetroad }}</p>
-            <p>最近24h内积水路面个数</p>
-            <p class="stat-number">{{ summaryData.num_waterroad }}</p>
+            <!-- 原版统计行：标签+数值同行，右对齐青色数值，细分割线 -->
+            <div class="stat-row">
+              <span class="stat-row-label">最近24h内颠簸路面个数</span>
+              <span class="stat-row-value">{{ summaryData.num_bumpyroad }}</span>
+            </div>
+            <div class="stat-row-divider"></div>
+            <div class="stat-row">
+              <span class="stat-row-label">最近24h内湿滑路面个数</span>
+              <span class="stat-row-value">{{ summaryData.num_wetroad }}</span>
+            </div>
+            <div class="stat-row-divider"></div>
+            <div class="stat-row">
+              <span class="stat-row-label">最近24h内积水路面个数</span>
+              <span class="stat-row-value">{{ summaryData.num_waterroad }}</span>
+            </div>
             <el-divider />
             <p class="maintain-title">最近24h内以下路段存在颠簸，建议养护</p>
             <div class="maintain-list">
-              <span v-for="(road, i) in summaryData.bumpyRoadArray" :key="'b'+i">{{ road }} </span>
+              <span v-for="(road, i) in summaryData.bumpyRoadArray" :key="'b'+i" class="road-name">{{ road }} </span>
               <span v-if="!summaryData.bumpyRoadArray || summaryData.bumpyRoadArray.length === 0" class="no-data">暂无数据</span>
             </div>
             <p class="maintain-title">最近24h内以下路段存在湿滑，建议养护</p>
             <div class="maintain-list">
-              <span v-for="(road, i) in summaryData.slipperyRoadArray" :key="'s'+i">{{ road }} </span>
+              <span v-for="(road, i) in summaryData.slipperyRoadArray" :key="'s'+i" class="road-name">{{ road }} </span>
               <span v-if="!summaryData.slipperyRoadArray || summaryData.slipperyRoadArray.length === 0" class="no-data">暂无数据</span>
             </div>
             <p class="maintain-title">最近24h内以下路段存在积水，建议养护</p>
             <div class="maintain-list">
-              <span v-for="(road, i) in summaryData.waterRoadArray" :key="'w'+i">{{ road }} </span>
+              <span v-for="(road, i) in summaryData.waterRoadArray" :key="'w'+i" class="road-name">{{ road }} </span>
               <span v-if="!summaryData.waterRoadArray || summaryData.waterRoadArray.length === 0" class="no-data">暂无数据</span>
             </div>
           </div>
@@ -747,10 +779,21 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; font-family: 'No
 .sensor-label { font-size: 11px; opacity: 0.8; }
 .sensor-card .value { font-size: 16px; font-weight: bold; color: #FFF6DA; }
 .alarm-header { display: flex; justify-content: space-between; align-items: center; }
-.stat-value { font-size: 28px; font-weight: bold; color: #FFF6DA; }
-.stat-label { font-size: 12px; color: #a0a0a0; }
-.stat-number { font-size: 22px; font-weight: bold; color: #FFF6DA; }
-.stat-weather { font-size: 24px; margin: 8px 0; color: #FFF6DA; }
+/* 原版两栏布局：覆盖范围+天气 */
+.stats-top-row { display: flex; gap: 10px; margin-bottom: 8px; }
+.stats-coverage, .stats-weather { flex: 1; text-align: center; }
+.stat-value-cyan { font-size: 26px; font-weight: bold; color: #4FC3F7; line-height: 1.2; }
+.stats-coverage-icon { margin: 6px 0; }
+.stat-label { font-size: 11px; color: #a0a0a0; }
+.stats-weather-icon { margin: 8px 0; }
+.weather-temp { font-size: 14px; color: #a0a0a0; margin-top: 2px; }
+/* 原版统计行：标签左对齐，数值右对齐青色，细分割线 */
+.stat-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 8px 8px 0; }
+.stat-row-label { font-size: 12px; color: #FFF6DA; }
+.stat-row-value { font-size: 18px; font-weight: bold; color: #4FC3F7; }
+.stat-row-divider { height: 1px; background: rgba(255,246,218,0.1); }
+/* 原版：道路名称青色强调 */
+.road-name { color: #4FC3F7; font-weight: 500; margin-right: 8px; display: inline-block; }
 /* Drawer dark theme overrides - 参照原版 DOM 实际 bg=rgba(0,0,0,0.6) 半透明黑
    原版未设 backdrop-filter，按规则 1 还原度第一，不擅自加 blur */
 .el-drawer {
@@ -777,9 +820,9 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; font-family: 'No
 .el-button--primary { background: linear-gradient(90deg, #32281e, #FFF6DA) !important; border-color: #FFF6DA !important; color: #000 !important; }
 .el-button--primary:hover { background: linear-gradient(90deg, #FFF6DA, #32281e) !important; }
 .el-divider { background: rgba(255,246,218,0.2) !important; }
-.maintain-title { font-size: 12px; color: #FFF6DA; margin: 12px 0 6px 0; opacity: 0.8; }
-.maintain-list { font-size: 13px; color: #FFF6DA; min-height: 20px; padding: 4px 0; }
-.maintain-list .no-data { color: #666; font-style: italic; }
+.maintain-title { font-size: 12px; color: #FFF6DA; margin: 10px 0 4px 0; opacity: 0.8; line-height: 1.4; }
+.maintain-list { font-size: 13px; color: #FFF6DA; min-height: 20px; padding: 2px 0; line-height: 1.5; }
+.maintain-list .no-data { color: #4FC3F7; font-style: normal; text-align: center; display: block; }
 
 /* P7-iter.2-1: 自定义 Popup 详情样式 */
 .popup-detail { display: flex; flex-direction: column; gap: 8px; }
