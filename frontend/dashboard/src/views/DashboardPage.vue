@@ -224,34 +224,6 @@ const chartHeight = ref(200)
 const alarmTableRef = ref(null)
 
 // 告警测试数据：各路段真实无锡地名
-const alarmTestData = [
-  { roadName: '清南路', sourceName: '苏BDA7567', eventType: '打滑点', datetime: '2026-06-24T14:22:57' },
-  { roadName: '新荣路', sourceName: '苏B6T3921', eventType: '颠簸点', datetime: '2026-06-24T14:19:52' },
-  { roadName: '新荣路', sourceName: '苏B6T3920', eventType: '颠簸点', datetime: '2026-06-24T14:19:48' },
-  { roadName: '新荣路', sourceName: '苏B6T3919', eventType: '颠簸点', datetime: '2026-06-24T14:19:33' },
-  { roadName: '翠山路', sourceName: '苏BAF1234', eventType: '湿滑点', datetime: '2026-06-24T14:18:10' },
-  { roadName: '兴昌南路', sourceName: '苏B7E8901', eventType: '颠簸点', datetime: '2026-06-24T14:15:44' },
-  { roadName: '内环快速路', sourceName: '苏B3K5678', eventType: '颠簸点', datetime: '2026-06-24T14:12:30' },
-  { roadName: '健康路', sourceName: '苏B9M2345', eventType: '颠簸点', datetime: '2026-06-24T14:08:22' },
-  { roadName: '凤翔北路', sourceName: '苏B5N6789', eventType: '颠簸点', datetime: '2026-06-24T14:05:18' },
-  { roadName: '南湖中路', sourceName: '苏B8P9012', eventType: '颠簸点', datetime: '2026-06-24T14:02:05' },
-  { roadName: '梁溪大桥', sourceName: '苏B2Q3456', eventType: '颠簸点', datetime: '2026-06-24T13:58:33' },
-  { roadName: '民丰路', sourceName: '苏B4R7890', eventType: '颠簸点', datetime: '2026-06-24T13:55:27' },
-  { roadName: '惠钱路', sourceName: '苏BCF5678', eventType: '湿滑点', datetime: '2026-06-24T13:50:12' },
-  { roadName: '塘南路', sourceName: '苏BDG9012', eventType: '颠簸点', datetime: '2026-06-24T13:45:08' },
-  { roadName: '广诚路', sourceName: '苏BEX3456', eventType: '颠簸点', datetime: '2026-06-24T13:40:55' },
-  { roadName: '东内环快速路', sourceName: '苏BFY7890', eventType: '颠簸点', datetime: '2026-06-24T13:35:42' },
-  { roadName: '团结路', sourceName: '苏BGZ1234', eventType: '打滑点', datetime: '2026-06-24T13:30:18' },
-  { roadName: '锡沪路', sourceName: '苏BHA5678', eventType: '颠簸点', datetime: '2026-06-24T13:25:05' },
-  { roadName: '太湖大道', sourceName: '苏BIB9012', eventType: '颠簸点', datetime: '2026-06-24T13:20:50' },
-  { roadName: '蠡湖大道', sourceName: '苏BJX3456', eventType: '湿滑点', datetime: '2026-06-24T13:15:33' },
-  { roadName: '高浪路', sourceName: '苏BKY7890', eventType: '颠簸点', datetime: '2026-06-24T13:10:22' },
-  { roadName: '机场路', sourceName: '苏BLZ1234', eventType: '颠簸点', datetime: '2026-06-24T13:05:11' },
-  { roadName: '金城路', sourceName: '苏BMA5678', eventType: '打滑点', datetime: '2026-06-24T12:58:45' },
-  { roadName: '运河西路', sourceName: '苏BNB9012', eventType: '颠簸点', datetime: '2026-06-24T12:52:30' },
-  { roadName: '蓉湖大桥', sourceName: '苏BOC3456', eventType: '颠簸点', datetime: '2026-06-24T12:45:18' },
-]
-
 let alarmScrollTimer = null
 
 // P7-iter.2-3: roadNetLayers 已抽到 LayerPanel.vue 内部
@@ -494,8 +466,11 @@ function onPopupCancel() {
 }
 
 function loadAlarmList() {
-  // 使用测试数据展示告警列表
-  alarmList.value = alarmTestData
+  // 调 API 获取实时告警数据（不再使用硬编码测试数据）
+  api.getAlarmList(0).then(res => {
+    const data = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : [])
+    if (data.length > 0) alarmList.value = data
+  }).catch(() => {})
 }
 
 // 告警行样式：透明底 + 分割线
@@ -573,7 +548,10 @@ function loadOnlineVehicles() {
 
 function loadEventSummary() {
   api.getEventSummary().then(res => {
-    const data = (res && res.data) ? res.data : res
+    // 后端返回 ResponseEntity<String>（Content-Type 可能为 text/plain），
+    // 需要先 JSON.parse 处理
+    const parsed = typeof res === 'string' ? JSON.parse(res) : res
+    const data = (parsed && parsed.data) ? parsed.data : parsed
     if (data) {
       summaryData.num_bumpyroad = data.bumpy_road_amount || 0
       summaryData.num_wetroad = data.slippery_road_amount || 0
