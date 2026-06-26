@@ -1,65 +1,77 @@
-# VaaS 项目上下文摘要（精简版）
+# VaaS 项目上下文摘要
 
-> 启动时先读此摘要，完整版见对应源文件
+> 启动时先读此摘要。完整参考见 `PROJECT_RULES.md` | `TASK_TRACKING.md`
 
 ## 项目定位
-城市级道路状态感知与预警系统。车端传感器+路侧气象站 → 云端融合分析 → PC5终端预警。
-落地无锡（150辆出租车）。复现目标：从编译后代码还原可编译运行的源码。
+城市级道路状态感知与预警系统。车端传感器 + 路侧气象站 → 云端融合分析 → PC5 终端预警。
+落地无锡（150 辆出租车）。复现目标：从编译后代码还原可编译运行的源码。
 
-## 当前状态（Phase 7 执行中）
+## 当前状态（仅剩 P6 待启动）
+
 | Phase | 进度 | 说明 |
-|-------|------|------|
-| P1~P3 | ✅ 完成 | 素材提取、后端还原、前端还原 |
-| P4 | 🟡 75% | 集成验证（4.4a已完，4.4b~4.4e待做） |
-| P5 | 📋 待启动 | 算法验证 |
-| P6 | 📋 待启动 | 上线前整改 |
-| **P7** | **🔄 执行中** | **大屏重构（Vue 3 + 高德地图，32个任务，当前 P1 骨架完成）** |
+|-------|:----:|------|
+| P1 素材提取 | ✅ 100% | Source Map 还原 / JAR 反编译 / Python 提取 |
+| P2 后端还原 | ✅ 100% | 5 个 Spring Boot 微服务 + 算法模块 |
+| P3 前端还原 | ✅ 100% | dashboard（Vue 3）+ admin（反混淆还原）|
+| P4 集成验证 | ✅ 100% | 微服务联调 / 模拟器注入 / 全链路打通 |
+| P5 算法验证 | ✅ 100% | 26 项单元测试 + 字节码黑盒对比 |
+| **P6 上线整改** | **📋 0%** | **15 项（认证/加密/密码/容器化/配置/Nginx）** |
+| P7 大屏重构 | ✅ 100% | Vue 3 + 高德地图 + 8 次迭代 |
+| P8 工程优化 | ✅ 100% | 16 项（脚本/规范/OpenAPI/Actuator） |
+| **合计 (114 项)** | **87%** | **完成 99 项，仅剩 P6 待启动** |
 
 ## 微服务
+
 | 服务 | 端口 | 说明 |
-|------|------|------|
+|------|:----:|------|
 | receiver | 50412 | WebSocket 数据接入（/ws/kt /ws/motion /ws/location）|
-| vaas-backend | 50410 | 核心业务+算法（/spring/v1）|
-| detector4kt | - | KT710事件检测（颠簸/湿滑）|
-| detector4motion | - | 6轴运动检测（颠簸）|
-| admin-api | 50415 | 管理后台API |
+| vaas-backend | 50410 | 核心业务 + 算法引擎（/spring/v1）|
+| detector4kt | 50413 | KT710 事件检测（颠簸/湿滑）|
+| detector4motion | 50414 | 6 轴运动检测（颠簸）|
+| admin-api | 50415 | 管理后台 API |
 | MySQL | 3306 | 持久化 |
-| Redis | 6379 | 缓存/队列/PubSub |
+| Redis | 6379 | 缓存 / 队列 / PubSub |
 
 ## 核心 API（大屏用）
-- POST `/get-alarm-list` {hour} → 告警列表
-- POST `/get_real_time_sensor_data` {road_name} → 气象站数据
-- POST `/get_last24h_data_plot` {road_name, data_title} → 24h图表
-- POST `/get_covered_range` → [面积, 道路长度, 里程]
-- GET `/get_weather` → 天气
-- POST `/get-event-summary` → 事件统计
-- SSE `/stream_data` → 实时事件（bump/slip/ponding/ice/low_attachment）
 
-## 数据模型
-- 车辆事件：eventType/deviceId/plateNumber/eventTimestamp/longitude/latitude/roadName/level
-- 气象站：airTemperature/roadSurfaceTemperature/relativeHumidity/waterLayerThickness
-- 天气：temp/humidity/windSpeed/text/icon
+| 方法 | 路径 | 用途 |
+|------|------|------|
+| POST | `/get-alarm-list` | 告警列表 |
+| POST | `/get_real_time_sensor_data` | 气象站数据 |
+| POST | `/get_last24h_data_plot` | 24h 图表 |
+| POST | `/get_covered_range` | 覆盖范围 |
+| GET | `/get_weather` | 天气 |
+| POST | `/get-event-summary` | 事件统计 |
+| SSE | `/stream_data` | 实时事件推送 |
 
 ## 目录结构
+
 ```
-├── backend/          # 5个微服务 + vaas-common
+├── CLAUDE.md               # AI 工作规则（每次启动读）
+├── PROJECT_RULES.md         # 项目全景/架构/约束（按需查阅）
+├── TASK_TRACKING.md         # 任务进度（按需查阅）
+├── ARCHIVE.md               # 历史迭代记录（回溯用）
+├── LESSONS_LEARNED.md       # 问题复盘
+│
+├── backend/                 # 5 个微服务 + 算法模块
 ├── frontend/
-│   ├── dashboard/    # Vue 3 + Vite（新重构）
-│   └── admin/        # Vue 3 + Vite（管理后台）
-├── reference/        # 反编译/还原的原始素材
+│   ├── dashboard/           # 大屏 (Vue 3 + Vite + 高德地图)
+│   └── admin/               # 管理后台 (Vue 3 + Vite)
+├── simulator/python/        # Python 算法
+├── reference/               # 反编译/还原原始素材（只读）
 │   ├── decompiled-jar/
 │   └── recovered-src/
-├── simulator/python/ # Python 算法
-└── docs/plans/       # 设计文档和计划
+├── docs/                    # 文档 + 大屏基线
+└── scripts/                 # 运维脚本
 ```
 
 ## 关键配置
-- 高德地图 Key: ba8f650d9f48ac56556e2858bc1499ad
-- 安全密钥: 8e1fb2869d1e0e5307d7694bb588a671
-- API base: http://localhost:50410/spring/v1
-- 地图中心: 无锡 (120.45, 31.59), zoom=12
+
+- 高德地图 Key: `ba8f650d9f48ac56556e2858bc1499ad`
+- API base: `http://localhost:50410/spring/v1`
+- 前端地址：大屏 8082 / 管理后台 8081
+- 地图中心：无锡 (120.45, 31.59), zoom=12
 
 ## 绝对红线
-- 严禁写 Demo 页面/假数据冒充还原产物（见 hard-boundary-no-fake-code.md）
 
-> 完整版: PROJECT_RULES.md | TASK_TRACKING.md | LESSONS_LEARNED.md
+- ❌ 严禁 Demo 页面/假数据冒充还原产物（见 `CLAUDE.md §🚫`）

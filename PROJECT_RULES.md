@@ -295,87 +295,20 @@ vaas-reproduction/
 
 ### 3.1 工作顺序
 
-```
-Phase 1: 参考素材提取 ✅ 已完成
-  ├── Source Map → 大屏前端完整源码    ← ✅ 已完成
-  ├── JAR → 反编译后端源码             ← ✅ 已完成
-  ├── Python 脚本直接复制              ← ✅ 已完成
-  └── 文档关键信息提取                  ← [取消] 配置已全量解压
-  ↓
-Phase 2: 后端还原 ✅ 已完成
-  ├── receiver 服务 (50412)            ← ✅ 已还原
-  ├── vaas-backend 主服务 (50410)      ← ✅ 已还原
-  ├── detector4kt 事件检测 (50413)     ← ✅ 已还原
-  ├── detector4motion 颠簸检测 (50414) ← ✅ 已还原
-  ├── admin-api 管理后台 (50415)       ← ✅ 已还原
-  └── vaas-common 公共库               ← ✅ 已还原
-  ↓
-Phase 3: 前端还原 ✅ 已完成
-  ├── dashboard 大屏 (Vue 3 + Vite)    ← ⚠️ 重写：Source Map 还原的 CSS/render
-  │                                       函数无法正常集成，改用 Vue 3 + Element
-  │                                       Plus + 高德地图 全新构建（详见
-  │                                       LESSONS_LEARNED.md#006，后端 API
-  │                                       全部复用，功能 100% 覆盖）
-  └── admin 管理后台 (Vue 3 + Vite)    ← ✅ 已还原，从混淆JS反提取结构重建
-  ↓
-Phase 4: 集成验证 ✅ 已完成
-  ├── 6 个微服务联调                   ← ✅ 全部启动运行
-  ├── 模拟器数据注入测试               ← ✅ bump/slip 事件成功写入 MySQL+Redis
-  ├── 前后端全链路联调                 ← ✅ 大屏/管理后台可访问，API 代理打通
-  └── 功能完整性验证 & 收尾            ← ✅ 4.4a~4.4e 全部完成
-  ↓
-Phase 5: 算法验证 ✅ 已完成
-  ├── 算法单元测试                     ← ✅ BumpyProcessor / BumpyProcessor4Motion
-  │                                       / Python 交叉验证 共 26/26 通过
-  └── 原始 JAR 黑盒对比测试           ← ✅ 字节码对比完全一致
-  ↓
-Phase 6: 上线前整改 📋 已规划（0/15）
-  ├── 🔴 P0 必做（6 项）：认证鉴权 / HTTPS 加密 / 数据库密码 / 容器化
-  │     / 配置管理 / Nginx 反代
-  ├── 🟠 P1 强烈建议（4 项）：高可用 / OBU 协议适配 / WS 加固 / 外部依赖
-  └── 🟡 P2 建议考虑（5 项）：监控告警 / 数据生命周期 / 日志 / 文档 / 合规
-  ↓
-Phase 7: 大屏重构 ✅ 已完成（33/33）
-  ├── 改用 Vue 3 + Vite + Element Plus + 高德地图重写
-  ├── 6 个子阶段：骨架 / 布局+地图 / 左侧面板 / 内容面板 / 时间轴 / 集成联调
-  └── P7-iter.1..8 持续优化：数据接入 / 时间轴样式 / drawer 88% / B1 联动 / 方案A''
-       / flood toggle / 网联车 marker / 原版 PNG 图标替换
-  ↓
-Phase 8: 工程优化 ✅ 已完成（16/16）
-  ├── O1~O4 红伤组：start.sh JDK 自适应、status/logs/restart 新脚本
-  ├── O5~O9 工程规范：.gitignore、pre-commit hook、CHANGELOG、verify.sh、README 架构图
-  └── O10~O16 长线优化：OpenAPI、Actuator、LICENSE、查重提案等
-```
+Phase 进度详见 [TASK_TRACKING.md](./TASK_TRACKING.md)。概要：
 
-### 3.2 源代码引用规范
+| Phase | 状态 | 说明 |
+|-------|------|------|
+| P1 素材提取 | ✅ 完成 | Source Map 还原 / JAR 反编译 / Python 提取 |
+| P2 后端还原 | ✅ 完成 | 5 个 Spring Boot 微服务 + vaas-common + 算法模块 |
+| P3 前端还原 | ✅ 完成 | dashboard（Vue 3 重写）+ admin（反混淆还原）|
+| P4 集成验证 | ✅ 完成 | 微服务联调 / 模拟器注入 / 全链路打通 |
+| P5 算法验证 | ✅ 完成 | 26 项单元测试 + 字节码黑盒对比 |
+| P6 上线整改 | 📋 待启动 | 15 项（认证/加密/密码/容器化/配置/Nginx 等）|
+| P7 大屏重构 | ✅ 完成 | Vue 3 + 高德地图替换 + 8 次迭代 |
+| P8 工程优化 | ✅ 完成 | 16 项（脚本/规范/OpenAPI/Actuator）|
 
-反编译/还原出的代码，每文件头部须注明来源:
-
-```java
-/**
- * SOURCE: Decompiled from receiver.jar (Spring Boot)
- * ORIGINAL: com.etas.vaas.receiver.controller.EventController
- * STATUS: Restored - compile verified
- */
-```
-
-### 3.3 算法还原特别规范
-
-算法文件头部须注明公式来源和参数依据:
-
-```java
-/**
- * ALGORITHM: 路面颠簸分析
- * SOURCE: Decompiled from vaas-backend.jar
- * DOC-REF: 详细设计说明书 §5.3.1
- * 
- * 逻辑说明:
- * 1. 提取 Z 轴加速度（垂直方向）
- * 2. 使用 5s 滑动窗口计算方差、峰度、标准差
- * 3. 结合车速标准化计算"颠簸得分"
- * 4. 映射为颠簸等级 Level 0~5
- */
-```
+> 文件头标注规范已移至 [CLAUDE.md](./CLAUDE.md#%EF%B8%8F-%E6%96%87%E4%BB%B6%E5%A4%B4%E6%A0%87%E6%B3%A8) §🏷️
 
 ---
 
@@ -404,9 +337,9 @@ Redis模式: receiver/vaas-backend/detector4kt/admin-api 使用单机；detector
 
 ```
 大屏 (dashboard):
-  - Vue 2 + Webpack (与原始一致)
-  - Element UI + ECharts
-  - 禁止升级到 Vue 3 (保持兼容性)
+  - Vue 3 + Vite（P7 重构，Source Map 还原的 Vue 2 render/CSS 无法集成）
+  - Element Plus + ECharts + 高德地图
+  - 后端 API 100% 复用原始接口
 
 管理后台 (admin):
   - Vue 3 + Vite (重写时选型)
@@ -422,51 +355,23 @@ Redis模式: receiver/vaas-backend/detector4kt/admin-api 使用单机；detector
   Redis 8.8 (brew) — localhost:6379
 
 服务端口:
-  receiver:       50412
-  vaas-backend:   50410 (/spring/v1 上下文)
-  detector4kt:    50413
-  detector4motion:50414
-  admin-api:      50415
+  receiver:       50412  WebSocket 数据接入
+  vaas-backend:   50410  核心业务 /spring/v1
+  detector4kt:    50413  KT710 事件检测
+  detector4motion:50414  六轴颠簸检测
+  admin-api:      50415  管理后台 API
 
-启动方式:
-  Java服务: java -jar <module>/target/<module>.jar
-  Python算法: cd simulator/python && python3 main_6axis.py
+前端地址:
+  大屏: http://localhost:8082 (Vue 3 + Vite)
+  管理后台: http://localhost:8081 (Vue 3 + Element Plus, admin/123456)
+
+后端启动: cd backend && java -jar <module>/target/<module>.jar
+前端启动: npx vite --port 8081 (admin) / npx vite --port 8082 (dashboard)
+Python:   cd simulator/python && python3 main_6axis.py
 
 构建:
   mvn clean package -DskipTests (全量构建)
   mvn clean package -pl <module> -am (单个服务)
-```
-
-### 4.5 部署与访问
-
-```
-本地开发环境（当前）:
-  MySQL 9.6 (brew) — root@localhost:3306/vaas (无密码)
-  Redis 8.8 (brew) — localhost:6379
-
-服务端口:
-  receiver:       50412  (WebSocket 数据接收)
-  vaas-backend:   50410  (核心业务+算法引擎, /spring/v1)
-  detector4kt:    50413  (KT710事件检测)
-  detector4motion:50414  (六轴颠簸检测)
-  admin-api:      50415  (管理后台API)
-  六轴算法(Python):  —   (Redis消费者)
-
-前端地址:
-  大屏可视化:  http://localhost:8083  (原始编译文件+API代理)
-  管理后台:    http://localhost:8081  (Vue 3 + Element Plus, admin/123456)
-
-启动方式:
-  # 后端服务
-  cd backend && java -jar <module>/target/<module>.jar
-
-  # 前端
-  cd frontend/admin && npx vite --port 8081          # 管理后台
-  node /tmp/dashboard-proxy.js                        # 大屏(代理)
-
-  # Python
-  cd simulator/python && python3 main_6axis.py        # 六轴算法
-  cd simulator/python && bash run_weather.sh           # 天气更新
 ```
 
 ### 4.6 已发现问题记录
@@ -486,6 +391,47 @@ Redis模式: receiver/vaas-backend/detector4kt/admin-api 使用单机；detector
 1. Spring 的 `application-{profile}.yml` + 环境变量
 2. 提供 `application-dev.yml` 开发环境默认值
 3. 不提交真实密码/密钥到代码库
+
+### 4.8 Phase 完成审计清单
+
+> 每个 Phase 标记为 100% 完成前，必须逐项完成以下审计。任何一项"否"需先修复再标完成。
+
+```
+Phase {N} 完成审计
+├── [ ] PROJECT_RULES.md 准确性
+│     ├── §〇.2 系统架构：服务列表、端口、依赖关系与代码一致？
+│     ├── §〇.5 文档清单：目录结构与实际文件一致？
+│     ├── §〇.6 API 接口：Controller 改动已反映？
+│     └── §〇.7 管理后台页面：前端结构变化已反映？
+├── [ ] README.md 准确性
+│     ├── 服务端口表与 pom.xml 一致？
+│     ├── 脚本工具章节覆盖所有 scripts/ 下的脚本？
+│     └── 系统架构图 Mermaid 与实际数据流一致？
+├── [ ] CLAUDE.md 规则合理性 — 强制操作步骤、复现原则是否仍适用？
+├── [ ] _CONTEXT_SUMMARY.md 同步更新 — Phase 进度、目录结构、配置与当前一致？
+├── [ ] CHANGELOG.md 已更新 — 本 Phase 关键改动已记录
+├── [ ] pre-commit hook 规则覆盖 — 本 Phase 涉及改动类型有对应规则？
+└── [ ] 文档 vs 代码一致性（自动检查项）
+      ├── backend/*Controller.java 改动 → PROJECT_RULES §〇.6
+      ├── backend/*/pom.xml 改动 → 端口表（PROJECT_RULES + README）
+      ├── backend/*/application.yml 改动 → 端口表
+      ├── frontend/dashboard/src/ 目录变化 → PROJECT_RULES §〇.5
+      └── backend/{新服务名}/ 增删 → 架构图 + 端口表
+```
+
+### 4.9 pre-commit hook 规则
+
+| # | 触发 | 提醒文档 |
+|---|------|---------|
+| 1 | frontend/dashboard/src/ 或 backend/*/src/ 改动 | TASK_TRACKING.md 进度概要 |
+| 2 | scripts/*.sh 改动 | README.md 脚本工具 |
+| 3 | docs/plans/ 新增 | TASK_TRACKING.md 引用 |
+| 4 | PROJECT_RULES.md / CLAUDE.md 改动 | 团队同步 |
+| 5 | backend/**/controller/ 改动 | PROJECT_RULES.md §〇.6 API |
+| 6 | backend/*/pom.xml 改动 | PROJECT_RULES.md + README.md 端口表 |
+| 7 | frontend/dashboard/src/ 目录结构变化 | PROJECT_RULES.md §〇.5 + §〇.7 |
+| 8 | backend/{service}/ 增删 | PROJECT_RULES.md + README.md 架构图 |
+| 9 | backend/*/application.yml 改动 | PROJECT_RULES.md + README.md |
 
 ---
 
