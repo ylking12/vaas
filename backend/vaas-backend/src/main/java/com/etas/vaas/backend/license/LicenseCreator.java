@@ -61,7 +61,7 @@ public class LicenseCreator {
         content.setIssuer(new X500Principal("CN=MyCompany, OU=Licensing, O=MyCompany, L=City, ST=State, C=CN"));
         content.setIssued(new Date());
         content.setNotBefore(new Date());
-        content.setNotAfter(new Date(System.currentTimeMillis() + 30000L));
+        content.setNotAfter(new Date(System.currentTimeMillis() + 3650L * 24 * 60 * 60 * 1000)); // 10年有效期
         content.setConsumerType("User");
         content.setConsumerAmount(1);
         content.setInfo("This is a license for MyCompany.");

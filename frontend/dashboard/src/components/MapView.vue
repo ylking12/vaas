@@ -48,7 +48,7 @@ const STATIONS = [
 function loadAMap() {
   return new Promise((resolve, reject) => {
     if (window.AMap) return resolve(window.AMap)
-    window._AMapSecurityConfig = { securityJsCode: MAP_SECRET }
+    // 旧版高德：只用 key，不需要 securityJsCode（与原始大屏一致）
     const script = document.createElement('script')
     script.src = `https://webapi.amap.com/maps?v=2.0&key=${MAP_KEY}`
     script.onload = () => resolve(window.AMap)

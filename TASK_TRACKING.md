@@ -1,6 +1,6 @@
 # VaaS 项目复现 - 任务跟踪总表
 
-> 更新时间: 2026-06-24 | 已完成任务的详细记录已归档到 [ARCHIVE.md](./ARCHIVE.md)
+> 更新时间: 2026-06-26 | 已完成任务的详细记录已归档到 [ARCHIVE.md](./ARCHIVE.md)
 
 ## 进度概要
 
@@ -145,6 +145,7 @@ Phase 5
 ├── 6.3 ⏳ 数据库密码 — MySQL 空密码 / Redis 无认证 / admin 依赖 password.txt
 ├── 6.4 ⏳ 容器化部署 — 手动 java -jar，需 Docker + docker-compose
 ├── 6.5 ⏳ 配置管理 — 硬编码 .env / localhost，需多环境配置体系
+│   └── 📌 已确认：线上大屏原始编译版使用相对路径 `/spring/v1/`（Nginx 反代），非 localhost 直连
 └── 6.6 ⏳ Nginx 反代 — 前端无生产部署方式，需统一入口 + HTTPS 终止
 
 🟠 P1: 强烈建议（4项）
@@ -278,6 +279,12 @@ Phase 8 (16/16) ✅ 全部完成
 ```
 
 ---
+
+## 项目文档索引
+
+| 文档 | 位置 | 说明 |
+|------|------|------|
+| 替换影响分析报告 | [docs/replacement-impact-report.md](./docs/replacement-impact-report.md) | 后端整站替换到线上的全面影响分析（2026-06-26） |
 
 ## 待部署事项
 

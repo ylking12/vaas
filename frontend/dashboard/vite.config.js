@@ -10,5 +10,8 @@ export default defineConfig({
       // P7-iter.8: '@' 指向 src/，沿用原版 Vue 2 项目的 import 风格
       '@': path.resolve(__dirname, 'src')
     }
+  },
+  build: {
+    outDir: 'www'
   }
 })
