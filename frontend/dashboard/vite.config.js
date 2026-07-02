@@ -11,6 +11,14 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src')
     }
   },
+  server: {
+    proxy: {
+      '/spring/v1': {
+        target: 'http://localhost:50410',
+        changeOrigin: true
+      }
+    }
+  },
   build: {
     outDir: 'www'
   }

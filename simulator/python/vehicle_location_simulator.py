@@ -22,11 +22,11 @@ import redis
 # dir_axis='lng' 沿经度方向走；'lat' 沿纬度方向走
 # 每辆车绑定一个轴向 + 初始方向，更像沿路直线行驶
 INITIAL_POSITIONS = {
-    '860123456789001': {'lng': 120.30, 'lat': 31.55, 'dir_axis': 'lng', 'dir_lng': 1,  'dir_lat': 0},
-    '860123456789002': {'lng': 120.45, 'lat': 31.58, 'dir_axis': 'lng', 'dir_lng': -1, 'dir_lat': 0},
-    '860123456789003': {'lng': 120.42, 'lat': 31.40, 'dir_axis': 'lat', 'dir_lng': 0,  'dir_lat': 1},
-    '860123456789004': {'lng': 120.50, 'lat': 31.60, 'dir_axis': 'lng', 'dir_lng': -1, 'dir_lat': 0},
-    '860123456789005': {'lng': 120.38, 'lat': 31.68, 'dir_axis': 'lat', 'dir_lng': 0,  'dir_lat': -1},
+    '863842050000001': {'lng': 120.30, 'lat': 31.55, 'dir_axis': 'lng', 'dir_lng': 1,  'dir_lat': 0},
+    '863842050000002': {'lng': 120.45, 'lat': 31.58, 'dir_axis': 'lng', 'dir_lng': -1, 'dir_lat': 0},
+    '863842050000003': {'lng': 120.42, 'lat': 31.40, 'dir_axis': 'lat', 'dir_lng': 0,  'dir_lat': 1},
+    '863842050000004': {'lng': 120.50, 'lat': 31.60, 'dir_axis': 'lng', 'dir_lng': -1, 'dir_lat': 0},
+    '863842050000005': {'lng': 120.38, 'lat': 31.68, 'dir_axis': 'lat', 'dir_lng': 0,  'dir_lat': -1},
 }
 
 # 无锡大致 bounds：120.05-120.60, 31.36-31.73（贴原大屏 WUXI_BOUNDS）

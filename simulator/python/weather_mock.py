@@ -49,7 +49,7 @@ def fetch_weather():
 def save_to_mysql(weather):
     """写入 MySQL weather 表"""
     try:
-        conn = pymysql.connect(host="localhost", user="root", password="", database="vaas")
+        conn = pymysql.connect(host="127.0.0.1", user="root", password="root123", database="vaas", port=3306)
         cursor = conn.cursor()
         now = datetime.now()
         for district, (lon, lat) in DISTRICTS.items():
