@@ -35,6 +35,7 @@ reference/decompiled-admin/*.beautified.js
 
 # --- Python virtual env (large binaries from decompilation) ---
 reference/**/venv/
+reference/**/*venv/
 reference/**/*.so
 
 # --- Backup JARs ---

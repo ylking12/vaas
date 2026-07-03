@@ -1,0 +1,73 @@
+spring:
+  banner:
+    charset: UTF-8
+    location: static/banner.txt
+  data:
+    redis:
+            #cluster:
+            #nodes:
+            #- 192.168.112.17:7001
+            #- 192.168.112.17:7000
+      host: ${REDIS_HOST:192.168.112.17}
+            # host: 127.0.0.1
+            #port: ${REDIS_PORT:6379}
+      database: 0
+
+            #host: ${REDIS_HOST:192.168.112.17}
+            #host: 127.0.0.1
+            #port: ${REDIS_PORT:6379}
+            #database: 15
+      lettuce:
+        pool:
+          max-active: 16
+  datasource:
+    url: jdbc:mysql://${DB_HOST:192.168.112.17}:${DB_PORT:3306}/vaas?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: ${DB_USER:vaas}
+    password: ${DB_PASSWD:Etas_vaas!}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+common:
+  locationSearch:
+    toleratedDeltaTime: 1000 #ms
+  geo:
+    roadNameSearchRange: 10  # km
+    eventDeduplicationEnabled: true
+    eventDeduplicationRange: 5  # m
+    eventBounds:
+      longitude:
+        left: 120.05
+        right: 120.60
+      latitude:
+        bottom: 31.36
+        top: 31.73
+
+processor:
+  debounce: false
+  debounceInterval: 1000  # ms
+  bumpy:
+    distance: 3 # m
+  slippery:
+    # 5/1.6=1.389
+    speed-threshold: 1.389
+    mu-threshold: 0.51
+
+algorithm:
+  kt:
+    bump:
+      enable: false
+      steer-ratio-diff-lv1: 0.1   # 0.1
+      steer-ratio-diff-lv2: 0.05  # 0.05
+      mean-break-pressure-threshold: 1
+      sum-speed-ratio-threshold: 3
+      correlation-threshold: 0.8 # 0.5
+      mean-speed-threshold: 9.7
+    slip:
+      enable: true
+      mu-threshold:
+mode: prod
+kt-timezone: UTC
+logging:
+  level:
+    com.etas.vaas.detector.common: debug
+    com.etas.vaas.detector.event: trace
+    com.etas.vaas.detector.component: debug

@@ -1,0 +1,57 @@
+spring:
+  banner:
+    charset: UTF-8
+    location: static/banner.txt
+  data:
+    redis:
+      cluster:
+        nodes:
+          - 192.168.112.17:7000
+            # host: ${REDIS_HOST:192.168.112.17}
+            # host: 127.0.0.1
+          #port: ${REDIS_PORT:6379}
+      database: 0
+      lettuce:
+        pool:
+          max-active: 16
+  datasource:
+    url: jdbc:mysql://${DB_HOST:192.168.112.17}:${DB_PORT:3306}/vaas_test?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: ${DB_USER:vaas}
+    password: ${DB_PASSWD:Etas_vaas!}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+
+common:
+  locationSearch:
+    toleratedDeltaTime: 1000 #ms
+  geo:
+    roadNameSearchRange: 10  # km
+    eventDeduplicationRange: 5  #m
+    eventDeduplicationH3Resolution: 13
+    eventBounds:
+      longitude:
+        left: 120.05
+        right: 120.60
+      latitude:
+        bottom: 31.36
+        top: 31.73
+
+motion-processor:
+  debounce:
+    enabled: true
+    interval: 3000 #ms
+  thresholds:
+    level7:
+      yAmplitude: 0.43
+      zAmplitude: 0.25
+    level5:
+      yAmplitude: 0.35
+      zAmplitude: 0.25
+    level3:
+      yAmplitude: 0.3
+      zAmplitude: 0.25
+
+logging:
+  level:
+    com.etas.vaas.detector4motion.consumer: info
+    com.etas.vaas.detector4motion.processor: info

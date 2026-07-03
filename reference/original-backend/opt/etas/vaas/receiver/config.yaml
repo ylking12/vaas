@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: receiver
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: 6379
+      #      password: ${REDIS_PASSWD}
+      database: 0
+      lettuce:
+        pool:
+          max-active: 16
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:3306/vaas?allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: ${DB_USER}
+    password: ${DB_PASSWD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  flyway:
+    enabled: false
+    encoding: UTF-8
+    locations: classpath:db/migration
+    # if checkSum didn't match while start, turn below value to false
+    validate-on-migrate: true
+    baseline-on-migrate: true
+    clean-disabled: true
+
+server:
+  port: 50412
+
+websocket:
+  kt-path: /ws/kt
+  motion-path: /ws/motion
+  location-path: /ws/location
+
+redis:
+  kt-max-queue-size: 80000
+  motion-max-queue-size: 80000
+  coordinate-max-queue-size: 80000
+
+gps:
+  # 清理间隔时间，单位为毫秒（1小时）
+  clean-interval: 3600000
+
+area:
+  roadRange: 10  # km
+  deduplicate: true
+  deduplicateRange: 5  # m
+  longitude:
+    left: 120.31417995
+    right: 120.59721142
+  latitude:
+    top: 31.7394908
+    bottom: 31.44289605
+
+logging:
+  level:
+    com.etas.vaas.common.component: debug
+    com.etas.vaas.receiver.service: debug
+    com.etas.vaas.receiver.controller: info
+    com.etas.vaas.receiver.websocket: debug

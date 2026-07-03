@@ -1,0 +1,27 @@
+spring:
+  redis:
+    host: 192.168.112.17
+    port: 6379
+    #    password: Wxyd@20210813
+    database: 0
+    timeout: 60000
+    lettuce:
+      pool:
+        max-active: 50 # 连接池最大连接数（使用负值表示没有限制）
+        max-idle: 20 # 连接池中的最大空闲连接
+        min-idle: 20 # 连接池中的最小空闲连接
+        max-wait: 500ms # 连接池最大阻塞等待时间（使用负值表示没有限制）
+      cluster:
+        refresh:
+          adaptive: true		#拓扑动态感应即客户端能够根据 redis cluster 集群的变化，动态改变客户端的节点情况，完成故障转移。
+          period: 60s			#刷新redis集群状态周期时间
+      timeout: 60s
+
+#server:
+#  port: 9090
+#swagger:
+#  enable: true   # on/off swagger
+logging:
+  config: classpath:logback-spring.xml
+  level:
+    com.bosch.cs.rcs: info

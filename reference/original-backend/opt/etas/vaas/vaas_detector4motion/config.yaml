@@ -1,0 +1,52 @@
+spring:
+  banner:
+    charset: UTF-8
+    location: static/banner.txt
+  data:
+    redis:
+      cluster:
+        nodes:
+          - 192.168.112.17:7000
+            # host: ${REDIS_HOST:192.168.112.17}
+            # host: 127.0.0.1
+            #port: ${REDIS_PORT:6379}
+      database: 0
+      lettuce:
+        pool:
+          max-active: 16
+  datasource:
+    url: jdbc:mysql://${DB_HOST:192.168.112.17}:${DB_PORT:3306}/vaas_test?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: ${DB_USER:vaas}
+    password: ${DB_PASSWD:Etas_vaas!}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+area:
+  roadRange: 10  # km
+  deduplicate: false
+  deduplicateRange: 5  # m
+  longitude:
+    left: 120.05
+    right: 120.60
+  latitude:
+    bottom: 31.36
+    top: 31.73
+
+env: prod
+
+algorithm:
+  6axis:
+    level7:
+      yAmplitude: 0.2
+      zAmplitude: 0.25
+    level5:
+      yAmplitude: 0.16
+      zAmplitude: 0.2
+    level3:
+      yAmplitude: 0.14
+      zAmplitude: 0.175
+
+group-id: 1
+
+logging:
+  level:
+    com.etas.vaas.detector4motion.consumer: info

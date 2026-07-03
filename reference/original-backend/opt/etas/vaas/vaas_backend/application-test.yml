@@ -1,0 +1,320 @@
+spring:
+  banner:
+    charset: UTF-8
+    location: static/banner.txt
+  data:
+    redis:
+      cluster:
+        nodes:
+          - 192.168.112.17:7000
+          #port: 6379
+      database: 0
+      lettuce:
+        pool:
+          max-active: 16
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:3306/vaas_test?allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${DB_USER}
+    password: ${DB_PASSWD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+server:
+  servlet:
+    context-path: /test/spring/v1
+  port: 50410
+
+
+logging:
+  config: file:/opt/etas/vaas/vaas_backend/logback-spring.xml
+
+gps:
+  clean:
+    interval: 3600000
+    expireTime: 86400000
+
+kt710:
+  max-queue-size: 80000
+  topic: kt710-topic
+  consumer-count: 1
+  key-prefix: kt710:queue
+
+offline-threshold: 5000 # ms
+
+district:
+  centroid:
+    - name: 锡山区
+      longitude: 120.482864
+      latitude: 31.624824
+
+    - name: 惠山区
+      longitude: 120.210639
+      latitude: 31.65177
+
+    - name: 滨湖区
+      longitude: 120.196869
+      latitude: 31.446922
+
+    - name: 梁溪区
+      longitude: 120.299797
+      latitude: 31.580629
+
+    - name: 新吴区
+      longitude: 120.429487
+      latitude: 31.506686
+
+serialNumber:
+  filter:
+    enabled: false
+
+sensors:
+  enabled: true
+  event_detect_interval: 900000
+  sdks:
+    sdk2:
+      enabled: true
+      port: 2555
+      class-name: RSServerController
+    sdk3:
+      enabled: true
+      port: 2345
+      host: 0.0.0.0
+      class-name: deviceServiceController
+      param-file:
+  sensor-ids:
+    15500257:
+      type: RoadCondition
+      short-id: 0
+      location:
+        longitude: 120.1
+        latitude: 122.3
+      road-name:
+      sensor-name: testname1
+    15500542:
+      type: RoadCondition
+      short-id: 0
+      location:
+        longitude: 120.1
+        latitude: 122.3
+      road-name:
+      sensor-name: testname1
+    15500543:
+      type: RoadCondition
+      short-id: 0
+      location:
+        longitude: 120.1
+        latitude: 122.3
+      road-name:
+      sensor-name: testname1
+    15500544:
+      type: RoadCondition
+      short-id: 0
+      location:
+        longitude: 120.1
+        latitude: 122.3
+      road-name:
+      sensor-name: testname1
+    15500545:
+      type: RoadCondition
+      short-id: 0
+      location:
+        longitude: 120.1
+        latitude: 122.3
+      road-name:
+      sensor-name: testname1
+    21098126:
+      type: Station
+      short-id: 1
+      location:
+        longitude: 120.1
+        latitude: 122.3
+      road-name:
+    21113177:
+      type: Station
+      short-id: 1
+      location:
+        longitude: 120.1
+        latitude: 122.3
+      road-name:
+    21113178:
+      type: Station
+      short-id: 1
+      location:
+        longitude: 120.1
+        latitude: 122.3
+      road-name:
+    21113179:
+      type: Station
+      short-id: 1
+      location:
+        longitude: 120.1
+        latitude: 122.3
+      road-name:
+    21113183:
+      type: Station
+      short-id: 1
+      location:
+        longitude: 120.1
+        latitude: 122.3
+      road-name:
+    21098575:
+      type: Atmospheric
+      short-id: 2
+      location:
+        longitude: 120.1
+        latitude: 122.3
+      road-name:
+    21118286:
+      type: Atmospheric
+      short-id: 2
+      location:
+        longitude: 120.1
+        latitude: 122.3
+      road-name:
+    21118287:
+      type: Atmospheric
+      short-id: 2
+      location:
+        longitude: 120.1
+        latitude: 122.3
+      road-name:
+    21118288:
+      type: Atmospheric
+      short-id: 2
+      location:
+        longitude: 120.1
+        latitude: 122.3
+      road-name:
+    21118289:
+      type: Atmospheric
+      short-id: 2
+      location:
+        longitude: 120.1
+        latitude: 122.3
+      road-name:
+
+  road-ids:
+#    文惠路与锦绣路
+    1:
+      Station: 21098126
+      RoadCondition: 15500257
+      Atmospheric: 21098575
+#     贡湖大道与金城路口
+    2:
+      Station: 21098126
+      RoadCondition: 15500257
+      Atmospheric: 21098575
+#      机场路-泰山路
+    3:
+      Station: 21098126
+      RoadCondition: 15500257
+      Atmospheric: 21098575
+#      高浪路-兴梁道
+    4:
+      Station: 21098126
+      RoadCondition: 15500257
+      Atmospheric: 21098575
+#      运河西路
+    5:
+      Station: 21098126
+      RoadCondition: 15500257
+      Atmospheric: 21098575
+  cache:
+    format:
+      measurement: Wsensor_{0}_last24h_measurement
+      event: Wsensor_{0}_last24h_event
+  data:
+    Station:
+        WindStrength:
+          dataType: Analog1
+          index: 1
+          key: windStrength
+          unit:
+          coefficient: 1
+        WindSpeed:
+          dataType: Analog2
+          index: 1
+          key: windSpeed
+          unit: m/s
+          coefficient: 1
+        WindDirection:
+          dataType: Analog1
+          index: 2
+          key: windDirection
+          coefficient: 1
+        AirTemperature:
+          dataType: Analog1
+          index: 3
+          key: airTemperature
+          unit: °C
+          coefficient: 1
+        RelativeHumidity:
+          dataType: Analog2
+          index: 3
+          key: relativeHumidity
+#          todo:%无法通过编译
+          unit: '%'
+          coefficient: 1
+    RoadCondition:
+        RoadConditions:
+          dataType: UNSigned32INT
+          index: 1
+          key: roadConditions
+          coefficient: 1
+        PondingDepth:
+          dataType: Float
+          index: 2
+          key: pondingDepth
+          coefficient: 1
+        IceThickness:
+          dataType: Float
+          index: 3
+          key: iceThickness
+          coefficient: 1
+        RoadSurfaceTemperature:
+          dataType: Float
+          index: 5
+          key: roadSurfaceTemperature
+          coefficient: 1
+    Atmospheric:
+        AtmosphericVisibility:
+          dataType: Analog1
+          index: 1
+          key: atmosphericVisibility
+  #        todo: 单位是什么
+          unit:
+          coefficient: 1
+  dataMatchSensor:
+    windStrength: Station
+    windSpeed: Station
+    windDirection: Station
+    airTemperature: Station
+    relativeHumidity: Station
+    roadConditions: RoadCondition
+    waterDepth: RoadCondition
+    iceThickness: RoadCondition
+    roadSurfaceTemperature: RoadCondition
+    atmosphericVisibility: Atmospheric
+  event:
+    waterLayerThickness:
+      compareType: GreatAndEq
+      data-type: Float
+      key: pondingDepth
+      event-type: water_event
+      value: 1
+    levelOfGrip:
+      compareType: LessAndEq
+      data-type: Float
+      key: waterLayerThickness
+      event-type: low_attachment_event
+      value: 0.62
+    ice-signal:
+      compareType: Eq
+      data-type: UNSigned32INT
+      key: roadConditions
+      event-type: ice_event
+      value: 7
+    wet_signal:
+      compareType: Eq
+      data-type: UNSigned32INT
+      key: roadConditions
+      event-type: wet_event
+      value: 3
