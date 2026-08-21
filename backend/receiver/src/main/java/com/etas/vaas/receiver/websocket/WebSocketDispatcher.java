@@ -2,7 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.etas.vaas.receiver.websocket.CoordinateHandler
+ *  com.etas.vaas.receiver.websocket.LocationHandler
  *  com.etas.vaas.receiver.websocket.MotionHandler
  *  com.etas.vaas.receiver.websocket.WebSocketConfig
  *  com.etas.vaas.receiver.websocket.WebSocketDispatcher
@@ -15,7 +15,7 @@
  */
 package com.etas.vaas.receiver.websocket;
 
-import com.etas.vaas.receiver.websocket.CoordinateHandler;
+import com.etas.vaas.receiver.websocket.LocationHandler;
 import com.etas.vaas.receiver.websocket.MotionHandler;
 import com.etas.vaas.receiver.websocket.WebSocketConfig;
 import jakarta.annotation.Resource;
@@ -32,9 +32,9 @@ public class WebSocketDispatcher {
     private WebSocketConfig webSocketConfig;
 
     @Bean
-    public HandlerMapping webSocketMapping(CoordinateHandler coordinateHandler, MotionHandler motionHandler) {
+    public HandlerMapping webSocketMapping(LocationHandler locationHandler, MotionHandler motionHandler) {
         HashMap<String, Object> handlerMap = new HashMap<String, Object>();
-        handlerMap.put(this.webSocketConfig.getLocationPath(), coordinateHandler);
+        handlerMap.put(this.webSocketConfig.getLocationPath(), locationHandler);
         handlerMap.put(this.webSocketConfig.getMotionPath(), motionHandler);
         SimpleUrlHandlerMapping mapping = new SimpleUrlHandlerMapping();
         mapping.setUrlMap(handlerMap);

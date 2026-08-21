@@ -1,0 +1,58 @@
+spring:
+  banner:
+    charset: UTF-8
+    location: static/banner.txt
+  application:
+    name: receiver
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      database: 0
+      lettuce:
+        pool:
+          max-active: 16
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/vaas?allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: ${DB_USER}
+    password: ${DB_PASSWD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  flyway:
+    enabled: true
+    encoding: UTF-8
+    locations: classpath:db/migration
+    validate-on-migrate: true
+    baseline-on-migrate: true
+    clean-disabled: true
+
+server:
+  port: 50412
+
+websocket:
+  motion-path: /ws/motion
+  location-path: /ws/location
+
+redis:
+  kt-max-queue-size: 80000
+  motion-max-queue-size: 80000
+  # 5fps * 60s * 10min
+  location-max-queue-size: 3000
+  # 5fps * 60s * 2min
+  location-allow-max-overflow: 600
+
+dump:
+  coordinate:
+    enable: false
+    device: []
+  kt:
+    enable: false
+    device: []
+  motion:
+    enable: false
+    device: []
+
+mybatis-plus:
+  global-config:
+    sequence:
+      datacenter-id: 1
+      worker-id: 1
