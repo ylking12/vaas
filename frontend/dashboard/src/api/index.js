@@ -35,6 +35,11 @@ export function getEventSummary() {
   return http.post('/get-event-summary')
 }
 
+// 新增（非原版还原产物）：每辆采集车当天的颠簸/湿滑点位数量统计
+export function getEventCountByVehicle(date) {
+  return http.post('/get-event-count-by-vehicle', { date })
+}
+
 export function deleteEvent(eventId, eventType) {
   return http.post('/delete-event', { eventId, eventType })
 }

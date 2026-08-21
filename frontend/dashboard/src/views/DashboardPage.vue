@@ -11,6 +11,9 @@
         </div>
       </div>
       <MapView ref="mapViewRef" @map-ready="onMapReady" @vehicle-click="onVehicleClick" @event-click="onEventClick" @station-click="onStationClick" />
+      <!-- 路网图层图例（还原原版 layer-color）：随路网图层选中状态显隐，类型随选中图层切换
+           dryWet -> slippery 图例；friction/temperature 同名 -->
+      <LayerColor :road-net-layer-type="legendType" v-show="legendVisible" />
       <div class="time-slider">
         <!-- P7+ 时间轴：参照原版 11-timeline.png + 设计文档 §3.4
              - 外层黑底圆角浮层（原版有）+ 70% 宽 + 居中 + 距底 5%
@@ -88,18 +91,33 @@
             </div>
           </div>
           <div class="panel-section alarm-section">
-            <div class="alarm-header">
-              <h4>告警视图列表</h4>
-              <el-button size="small" @click="exportAlarm">导出</el-button>
-            </div>
-            <div class="alarm-table-wrap">
-              <el-table ref="alarmTableRef" :data="alarmList" stripe size="small" height="240" :row-class-name="alarmRowClass">
-                <el-table-column prop="roadName" label="路名" min-width="120" />
-                <el-table-column prop="sourceName" label="告警源" min-width="120" />
-                <el-table-column prop="eventType" label="告警类型" min-width="100" />
-                <el-table-column prop="datetime" label="时间" min-width="140" :formatter="formatTime" />
-              </el-table>
-            </div>
+            <el-tabs v-model="alarmTab">
+              <el-tab-pane label="告警视图列表" name="alarm">
+                <div class="alarm-header">
+                  <el-button size="small" @click="exportAlarm">导出</el-button>
+                </div>
+                <div class="alarm-table-wrap">
+                  <el-table ref="alarmTableRef" :data="alarmList" stripe size="small" height="240" :row-class-name="alarmRowClass">
+                    <el-table-column prop="roadName" label="路名" min-width="120" />
+                    <el-table-column prop="sourceName" label="告警源" min-width="120" />
+                    <el-table-column prop="eventType" label="告警类型" min-width="100" />
+                    <el-table-column prop="datetime" label="时间" min-width="140" :formatter="formatTime" />
+                  </el-table>
+                </div>
+              </el-tab-pane>
+              <el-tab-pane label="采集车上报排行" name="vehicle">
+                <el-date-picker v-model="vehicleCountDate" type="date" size="small" format="YYYY-MM-DD" value-format="YYYY-MM-DD" :clearable="false" @change="loadVehicleCount" style="width:150px;margin-bottom:8px" />
+                <div class="alarm-table-wrap">
+                  <el-table :data="vehicleCountList" stripe size="small" height="240">
+                    <el-table-column type="index" label="#" width="40" />
+                    <el-table-column prop="plate" label="车牌" min-width="100" />
+                    <el-table-column prop="bumpCount" label="颠簸" min-width="60" />
+                    <el-table-column prop="slipCount" label="湿滑" min-width="60" />
+                    <el-table-column prop="totalCount" label="合计" min-width="60" />
+                  </el-table>
+                </div>
+              </el-tab-pane>
+            </el-tabs>
           </div>
         </div>
         <div class="drawer-right">
@@ -185,10 +203,12 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useDashboardStore } from '../stores/dashboard'
 import * as api from '../api'
+import { createLatestOnlyExecutor } from '../utils/latestOnly'
 import MapView from '../components/MapView.vue'
 import SensorChart from '../components/SensorChart.vue'
 import Popup from '../components/Popup.vue'
 import LayerPanel from '../components/LayerPanel.vue'
+import LayerColor from '../components/LayerColor.vue'
 import * as XLSX from 'xlsx'
 
 const store = useDashboardStore()
@@ -204,11 +224,17 @@ const rcsData = reactive({ coveredArea: 0, coveredRoadLength: 0, totalMilage: 0 
 const weatherData = reactive({ text: '', temp: 0, humidity: 0 })
 const summaryData = reactive({ num_bumpyroad: 0, num_wetroad: 0, num_waterroad: 0, bumpyRoadArray: [], slipperyRoadArray: [], waterRoadArray: [] })
 const onlineCount = ref(0)        // 联网车辆数（来自 /location 接口）
+// 新增（非原版还原产物）：采集车当天颠簸/湿滑上报排行
+const vehicleCountList = ref([])
+const _today = new Date()
+const vehicleCountDate = ref(`${_today.getFullYear()}-${String(_today.getMonth() + 1).padStart(2, '0')}-${String(_today.getDate()).padStart(2, '0')}`)
+// 新增（非原版还原产物）：告警/排行 tab 切换，默认告警视图列表
+const alarmTab = ref('alarm')
 const precipText = ref('--')     // 降水量（来自 /get_weather.precip）
 const selectedLayer = ref('dryWet')  // 路网状态默认选中第 1 个（干湿）
-const selectedVehicles = ref(false)  // 联网车辆（默认未选）
-const selectedPrecip = ref(false)     // 降水量（默认未选）
-const selectedStations = ref(false)   // 气象设备（默认未选）
+const selectedVehicles = ref(true)   // 联网车辆（默认显示）
+const selectedPrecip = ref(false)    // 降水量（默认未选）
+const selectedStations = ref(false)  // 气象设备（默认未选）
 
 // P7-iter.2-1: 自定义 Popup 状态
 const popupVisible = ref(false)
@@ -217,11 +243,12 @@ const popupType = ref('info')            // info | success | warning | danger
 const popupData = ref(null)              // {label: value} 形式展示
 const popupHasButtons = ref(true)        // 决定是否显示底部默认按钮
 const pendingEvent = ref(null)           // 事件删除确认时暂存
-// 问题 2 修复：selectedSpecial 默认 false（按用户原话 marker 由按钮控制，默认不显示）
-const selectedSpecial = ref(false)
+// 默认显示事件图层；用户仍可通过“路面积水颠簸事件”按钮关闭/重新打开
+const selectedSpecial = ref(true)
 const chartRef = ref(null)
 const chartHeight = ref(200)
 const alarmTableRef = ref(null)
+const runLatestMapEvents = createLatestOnlyExecutor()
 
 // 告警测试数据：各路段真实无锡地名
 let alarmScrollTimer = null
@@ -254,11 +281,25 @@ const sliderMarks = computed(() => {
   return m
 })
 
-// 时间轴联动：拖动时刷新地图事件标记 + 路网图（§3.5 + 方案 A 扩展）
-//  - loadMapEvents：5 个 API 按 hour 参数重查（联动事件 marker）
+// 路网图层图例：随 selectedLayer 联动显隐与类型
+// 还原版图层 key=dryWet 对应原版 slippery 图例（干湿状态）
+const legendType = computed(() => {
+  switch (selectedLayer.value) {
+    case 'dryWet': return 'slippery'
+    case 'friction': return 'friction'
+    case 'temperature': return 'temperature'
+    default: return ''
+  }
+})
+const legendVisible = computed(() => !!selectedLayer.value)
+
+// 时间轴联动：拖动时刷新当前已选图层
+//  - selectedSpecial=true 时，5 个事件 API 按 hour 参数重查（联动事件 marker）
 //  - setCurrentTime：通知 MapView 重新加载对应 num 的路网 .webp
 watch(sliderValue, (newVal) => {
-  loadMapEvents()
+  if (selectedSpecial.value) {
+    loadMapEvents()
+  }
   mapViewRef.value?.setCurrentTime(newVal)
 })
 
@@ -279,6 +320,18 @@ watch(drawerVisible, async (open) => {
   } else {
     stopAlarmScroll()
   }
+})
+
+// 新增（非原版还原产物）：采集车当天颠簸/湿滑上报排行
+function loadVehicleCount() {
+  api.getEventCountByVehicle(vehicleCountDate.value).then(res => {
+    vehicleCountList.value = Array.isArray(res) ? res : []
+  }).catch(() => { vehicleCountList.value = [] })
+}
+
+// 切到"采集车上报排行"tab 时加载数据
+watch(alarmTab, (v) => {
+  if (v === 'vehicle') loadVehicleCount()
 })
 
 // 告警列表自动滚动
@@ -323,32 +376,42 @@ function toggleLayer(item) {
       mapViewRef.value?.clearEventMarkers()
     }
   } else {
-    // 干湿/附着/温度：互斥（再点同一项关闭）
+    // 干湿/附着/温度：互斥单选（再点同一项关闭）
     if (selectedLayer.value === item.key) {
       selectedLayer.value = null
+      // 通知 MapView 清除路网图（修复：原取消分支不通知 MapView，图层残留）
+      mapViewRef.value?.toggleLayer(null)
     } else {
       selectedLayer.value = item.key
+      // MapView 内部互斥切换（先清所有路网图再加新的），避免多图层叠加
       mapViewRef.value?.toggleLayer(item.key)
     }
   }
 }
 
 // 任务 2：3 个新增 toggle
-// P7-iter.7：开启时启动 5s 间隔 timer 持续拉位置数据，让 marker 移动
+// P7-iter.7：车辆默认显示；开启时启动 5s 间隔 timer 持续拉位置数据，让 marker 移动
 // 关闭时停止 timer，避免不必要的后台拉取
 let vehicleTimer = null
+function startVehicleTimer() {
+  if (vehicleTimer) return
+  // 与 simulator/生产位置推送间隔（约 5s）对齐，保证地图 marker 实时刷新
+  vehicleTimer = setInterval(loadOnlineVehicles, 5000)
+}
+
+function stopVehicleTimer() {
+  if (!vehicleTimer) return
+  clearInterval(vehicleTimer)
+  vehicleTimer = null
+}
+
 function toggleVehicles() {
   selectedVehicles.value = !selectedVehicles.value
   if (selectedVehicles.value) {
     loadOnlineVehicles()  // 立即拉一次
-    if (vehicleTimer) clearInterval(vehicleTimer)
-    // 与 simulator 推送间隔（5s）对齐，保证地图 marker 实时刷新
-    vehicleTimer = setInterval(loadOnlineVehicles, 5000)
+    startVehicleTimer()
   } else {
-    if (vehicleTimer) {
-      clearInterval(vehicleTimer)
-      vehicleTimer = null
-    }
+    stopVehicleTimer()
   }
   mapViewRef.value?.showVehicleMarkers(selectedVehicles.value)
 }
@@ -490,7 +553,12 @@ function loadChartData() {
   api.getLast24hDataPlot(sensorId.value, chartType.value).then(res => {
     const data = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : [])
     if (data.length > 0) {
-      chartData.value = data.map((v, i) => ({ time: i + ':00', value: v }))
+      chartData.value = data.map((v, i) => {
+        if (v && typeof v === 'object') {
+          return { time: v.time || `${i}:00`, value: v.value }
+        }
+        return { time: `${i}:00`, value: v }
+      })
     } else {
       // 后端暂无历史数据时，基于当前传感器值生成模拟趋势
       // 使图表可见，展示组件功能完整性
@@ -541,7 +609,9 @@ function loadOnlineVehicles() {
         speed: v.speed,
         deviceId: v.deviceId
       }))
-      mapViewRef.value?.addVehicleMarkers(vehicles)
+      if (selectedVehicles.value) {
+        mapViewRef.value?.addVehicleMarkers(vehicles)
+      }
     }
   }).catch(() => {})
 }
@@ -566,11 +636,34 @@ function loadEventSummary() {
 let mapInstance = null
 let refreshTimer = null
 let sseSource = null
+let defaultsApplied = false
+
+function applyDefaultMapVisibility() {
+  if (defaultsApplied) return
+  const mv = mapViewRef.value
+  if (!mv) return
+
+  defaultsApplied = true
+
+  if (selectedLayer.value) {
+    mv.toggleLayer(selectedLayer.value)
+  }
+
+  if (selectedSpecial.value) {
+    loadMapEvents()
+  }
+
+  if (selectedVehicles.value) {
+    loadOnlineVehicles()
+    startVehicleTimer()
+  }
+}
 
 function onMapReady(instance, AMap) {
   mapInstance = { instance, AMap }
-  // 问题 2 修复：不自动调 loadMapEvents（按用户原话"刚加载时 marker 由按钮控制"）
-  // marker 改为：用户点"路面积水颠簸事件"按钮才显示
+  // 页面首次加载默认显示：联网车辆、干湿路网图层、路面积水颠簸事件图层
+  // 用户仍可通过抽屉按钮关闭/重新打开这些图层
+  applyDefaultMapVisibility()
 }
 
 // 地图事件加载：根据 sliderValue 计算 hour，调用 5 个 /get-last-24h-*-event API
@@ -583,26 +676,27 @@ async function loadMapEvents() {
   if (!mv) return
   const hour = Math.max(0, Math.abs(24 - sliderValue.value))
   try {
-    // P9-修复: 补全 5 种事件类型（与原大屏一致）
-    // 原大屏: 颠簸/湿滑/积水/结冰/低附着
-    // addEventMarkers 内部已先清除旧事件标记再加新的（MapView.vue:105 clearMarkers）
-    // 注意：即使 events 为空也要调 addEventMarkers([])，否则旧标记不会被清除
-    const [bump, slip, ponding, ice, lowAttach] = await Promise.all([
-      api.getLast24hEvent('bump', hour).catch(() => []),
-      api.getLast24hEvent('slip', hour).catch(() => []),
-      api.getLast24hEvent('ponding', hour).catch(() => []),
-      api.getLast24hEvent('ice', hour).catch(() => []),
-      api.getLast24hEvent('low-attachment', hour).catch(() => [])
-    ])
-    const events = [
-      ...(Array.isArray(bump) ? bump.map(e => ({ ...e, eventType: 'bump' })) : []),
-      ...(Array.isArray(slip) ? slip.map(e => ({ ...e, eventType: 'slip' })) : []),
-      ...(Array.isArray(ponding) ? ponding.map(e => ({ ...e, eventType: 'ponding' })) : []),
-      ...(Array.isArray(ice) ? ice.map(e => ({ ...e, eventType: 'ice' })) : []),
-      ...(Array.isArray(lowAttach) ? lowAttach.map(e => ({ ...e, eventType: 'low-attachment' })) : [])
-    ]
-    // 无条件调用，让 addEventMarkers 内部 clearMarkers 始终执行
-    mv.addEventMarkers(events)
+    await runLatestMapEvents(async () => {
+      // P9-修复: 补全 5 种事件类型（与原大屏一致）
+      // 原大屏: 颠簸/湿滑/积水/结冰/低附着
+      const [bump, slip, ponding, ice, lowAttach] = await Promise.all([
+        api.getLast24hEvent('bump', hour).catch(() => []),
+        api.getLast24hEvent('slip', hour).catch(() => []),
+        api.getLast24hEvent('ponding', hour).catch(() => []),
+        api.getLast24hEvent('ice', hour).catch(() => []),
+        api.getLast24hEvent('low-attachment', hour).catch(() => [])
+      ])
+      return [
+        ...(Array.isArray(bump) ? bump.map(e => ({ ...e, eventType: 'bump' })) : []),
+        ...(Array.isArray(slip) ? slip.map(e => ({ ...e, eventType: 'slip' })) : []),
+        ...(Array.isArray(ponding) ? ponding.map(e => ({ ...e, eventType: 'ponding' })) : []),
+        ...(Array.isArray(ice) ? ice.map(e => ({ ...e, eventType: 'ice' })) : []),
+        ...(Array.isArray(lowAttach) ? lowAttach.map(e => ({ ...e, eventType: 'low-attachment' })) : [])
+      ]
+    }, events => {
+      // 无条件调用，让 addEventMarkers 内部 clearMarkers 始终执行；旧请求结果会被 runLatestMapEvents 丢弃
+      mv.addEventMarkers(events)
+    })
   } catch {}
 }
 
@@ -612,7 +706,6 @@ onMounted(() => {
   loadChartData()
   loadCoveredData()
   loadEventSummary()
-  loadOnlineVehicles()
 
   refreshTimer = setInterval(() => {
     loadSensorData()
@@ -636,7 +729,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (refreshTimer) clearInterval(refreshTimer)
-  if (vehicleTimer) clearInterval(vehicleTimer)
+  stopVehicleTimer()
   if (sseSource) sseSource.close()
   stopAlarmScroll()
 })
@@ -659,6 +752,12 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; font-family: 'No
 .panel-btn { writing-mode: vertical-lr; padding: 16px 12px; cursor: pointer; color: #FFF6DA; font-size: 19.2px; background: #000; font-family: 'Noto Sans SC', sans-serif; }
 .panel-section { margin-bottom: 20px; }
 .panel-section h4 { font-size: 14px; color: #FFF6DA; margin-bottom: 8px; border-bottom: 1px solid rgba(255,246,218,0.2); padding-bottom: 4px; }
+/* 告警/排行 tab：标签颜色与 h4 一致(#FFF6DA)，选中高亮加粗(青色 #4FC3F7) */
+.alarm-section .el-tabs__item { color: #FFF6DA; font-size: 14px; }
+.alarm-section .el-tabs__item.is-active { color: #4FC3F7; font-weight: bold; }
+.alarm-section .el-tabs__item:hover { color: #4FC3F7; }
+.alarm-section .el-tabs__active-bar { background-color: #4FC3F7; }
+.alarm-section .el-tabs__nav-wrap::after { background-color: rgba(255,246,218,0.2); }
 /* P7+ 时间轴：参照原版 11-timeline.png + 设计文档 §3.4
    - 外层黑底圆角浮层（原版有）+ 70% 宽 + 居中 + 距底 5%
    - 两端 "过去23h" / "未来1h" 文字（原版有）
@@ -727,13 +826,23 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; font-family: 'No
 /* 参照原版实际 DOM 尺寸 (1690x1080)：
    左栏 422px + 中栏 634px + 右栏 634px = 1690px
    高度 100% (1080)，gap=0（原版三栏紧密无间距）*/
-.drawer-bg-wrap { background: rgba(0, 0, 0, 0.6); }
-.drawer-grid { display: flex; gap: 0; height: auto; color: #FFF6DA; }
-.drawer-left { width: 422px; overflow-y: auto; padding: 8px; flex-shrink: 0; }
+.drawer-bg-wrap { width: 100%; max-width: 100%; overflow: hidden; background: rgba(0, 0, 0, 0.6); }
+.drawer-grid {
+  display: grid;
+  grid-template-columns: 422px minmax(0, 1fr) minmax(360px, 0.9fr);
+  gap: 0;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  overflow: hidden;
+  color: #FFF6DA;
+}
+.drawer-left { width: 422px; min-width: 0; overflow-y: auto; padding: 8px; box-sizing: border-box; }
 .drawer-center {
-  width: 634px; flex-shrink: 0;
+  min-width: 0;
   display: flex; flex-direction: column; padding: 8px;
   overflow: hidden;
+  box-sizing: border-box;
 }
 .drawer-center .chart-section {
   flex: 0 0 auto;
@@ -743,7 +852,7 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; font-family: 'No
   flex: 1; min-height: 0;
 }
 .drawer-center .alarm-table-wrap { height: 240px; }
-.drawer-right { width: 634px; overflow-y: auto; padding: 8px; flex-shrink: 0; }
+.drawer-right { min-width: 0; overflow-y: auto; overflow-x: hidden; padding: 8px; box-sizing: border-box; }
 .road-section { margin-bottom: 12px !important; }
 .road-row { display: flex; align-items: center; gap: 6px; }
 .road-row .el-select { width: auto; min-width: 130px; }
@@ -766,9 +875,9 @@ html, body, #app { width: 100%; height: 100%; overflow: hidden; font-family: 'No
 .stats-weather-icon { margin: 8px 0; }
 .weather-temp { font-size: 14px; color: #a0a0a0; margin-top: 2px; }
 /* 原版统计行：标签左对齐，数值右对齐青色，细分割线 */
-.stat-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 8px 8px 0; }
-.stat-row-label { font-size: 12px; color: #FFF6DA; }
-.stat-row-value { font-size: 18px; font-weight: bold; color: #4FC3F7; }
+.stat-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-width: 0; padding: 8px 8px 8px 0; }
+.stat-row-label { min-width: 0; font-size: 12px; color: #FFF6DA; overflow-wrap: anywhere; }
+.stat-row-value { flex: 0 0 auto; font-size: 18px; font-weight: bold; color: #4FC3F7; text-align: right; white-space: nowrap; }
 .stat-row-divider { height: 1px; background: rgba(255,246,218,0.1); }
 /* 原版：道路名称青色强调 */
 .road-name { color: #4FC3F7; font-weight: 500; margin-right: 8px; display: inline-block; }

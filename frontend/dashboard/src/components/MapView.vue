@@ -260,15 +260,17 @@ function loadRoadNet(type, curTime) {
 // 设置当前时间（外部调用，触发所有激活图层按时间更新）
 function setCurrentTime(t) {
   currentTime = t
-  // 重新加载所有激活的图层
+  // 重新加载所有激活的图层（互斥模式下最多 1 个路网图层）
   const types = Array.from(roadNetLayers.keys())
-  types.forEach(t => removeRoadNetLayer(t))
-  types.forEach(t => loadRoadNet(t, currentTime))
+  types.forEach(tp => removeRoadNetLayer(tp))
+  types.forEach(tp => loadRoadNet(tp, currentTime))
 }
 
-// 切换图层（外部调用，问题 4 修复：add-only 不删已有）
-// 特殊：type='flood' **完全不切事件 marker**（按用户原话"图层不能消失"）
-//   → 只 emit layer-changed 让按钮高亮切换；marker 永远 setMap(map)
+// 切换图层（外部调用）
+// 还原原版 road-map.vue 行为：路网图层互斥单选，一次只显示一个。
+//   - type=null：清除所有路网图（用户取消选中）
+//   - type=正常：先清所有路网图，再加载新类型（避免多图层叠加导致切换异常）
+// 特殊：type='flood' 控制事件 marker，不走路网图（保持原语义）
 function toggleLayer(type) {
   if (type === 'flood') {
     // 不调任何地图操作（按钮只切 state，不影响 marker 显隐）
@@ -276,14 +278,13 @@ function toggleLayer(type) {
     return
   }
   if (!type) {
-    // 不清空（按用户原话关闭 drawer 不清空地图）
+    // 取消路网图层：清除所有路网图
+    clearAllRoadNetLayers()
     emit('layer-changed', null)
     return
   }
-  // 问题 4 修复：add-only，已有图层不删
-  if (roadNetLayers.has(type)) {
-    return
-  }
+  // 互斥单选：先清所有路网图，再加载新类型
+  clearAllRoadNetLayers()
   loadRoadNet(type, currentTime)
   emit('layer-changed', type)
 }

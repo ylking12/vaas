@@ -17,9 +17,38 @@ let chart = null
 let resizeObserver = null
 let resizeHandler = null
 
+function getYAxisScale() {
+  const values = props.data
+    .map(d => Number(d.value))
+    .filter(v => Number.isFinite(v))
+
+  if (values.length === 0) {
+    return { max: 40, interval: 10 }
+  }
+
+  const maxValue = Math.max(...values)
+  let axisMax = 40
+
+  if (maxValue > 40) {
+    axisMax = Math.ceil((maxValue * 1.1) / 10) * 10
+    // 相对湿度等百分比指标不应超过 100%，但仍给 40 以下的小数值指标保留原有 0~40 观感
+    if (maxValue <= 100) axisMax = Math.min(axisMax, 100)
+  }
+
+  let interval = 10
+  if (axisMax > 50 && axisMax <= 100) {
+    interval = 20
+  } else if (axisMax > 100) {
+    interval = Math.ceil(axisMax / 5 / 10) * 10
+  }
+
+  return { max: axisMax, interval }
+}
+
 function renderChart() {
   if (!chart) return
   const hasData = props.data.length > 0
+  const yAxisScale = getYAxisScale()
   chart.setOption({
     tooltip: { trigger: 'axis' },
     grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
@@ -44,8 +73,8 @@ function renderChart() {
     yAxis: {
       type: 'value',
       min: 0,
-      max: 40,
-      interval: 10,
+      max: yAxisScale.max,
+      interval: yAxisScale.interval,
       axisLabel: { fontSize: 10, color: '#a0a0a0' },
       splitLine: { lineStyle: { type: 'dashed', color: 'rgba(255,246,218,0.08)' } }
     },
