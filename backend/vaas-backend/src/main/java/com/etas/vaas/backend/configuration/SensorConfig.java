@@ -195,7 +195,7 @@ public enum DataType {
 }
 
 public enum CompareType {
-    GreatAndEq, LessAndEq, Great, Less
+    GreatAndEq, LessAndEq, Great, Less, Eq
 }
 
 public enum SensorType {

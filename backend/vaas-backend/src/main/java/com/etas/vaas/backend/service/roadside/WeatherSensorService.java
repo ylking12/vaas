@@ -186,6 +186,8 @@ implements IWeatherSensorService {
                 return data.compareTo(threshold) > 0;
             case Less:
                 return data.compareTo(threshold) < 0;
+            case Eq:
+                return data.compareTo(threshold) == 0;
             default:
                 return false;
         }

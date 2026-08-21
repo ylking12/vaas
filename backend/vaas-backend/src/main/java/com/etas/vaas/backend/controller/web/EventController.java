@@ -28,12 +28,16 @@
 package com.etas.vaas.backend.controller.web;
 
 import com.etas.vaas.backend.dto.request.DeleteEventRequest;
+import com.etas.vaas.backend.dto.request.EventCountByVehicleRequest;
 import com.etas.vaas.backend.dto.request.EventRequest;
 import com.etas.vaas.backend.dto.request.SimulatedEvent;
 import com.etas.vaas.backend.dto.response.AlarmResponse;
 import com.etas.vaas.backend.dto.response.EventResponse;
+import com.etas.vaas.backend.dto.response.VehicleEventCountResponse;
 import com.etas.vaas.backend.enumeration.RoadEventType;
 import com.etas.vaas.backend.service.web.EventService;
+import com.etas.vaas.backend.service.web.VehicleStatService;
+import jakarta.annotation.Resource;
 import com.etas.vaas.common.dto.response.ExternalEventDto;
 import com.etas.vaas.common.dto.response.VaaSResponseDto;
 import com.etas.vaas.common.service.ExternalEventService;
@@ -57,6 +61,8 @@ public class EventController {
     private static final Logger log = LoggerFactory.getLogger(EventController.class);
     private final EventService eventService;
     private final ExternalEventService externalEventService;
+    @Resource
+    private VehicleStatService vehicleStatService;
 
     @PostMapping(value={"/get-alarm-list"})
     public ResponseEntity<List<AlarmResponse>> getSensorEvent(@RequestBody EventRequest eventRequest) {
@@ -67,6 +73,12 @@ public class EventController {
     @PostMapping(value={"/get-event-summary"})
     public ResponseEntity<String> getEventSummary() {
         return ResponseEntity.ok(this.eventService.getEventSummary());
+    }
+
+    /** 新增（非原版还原产物）：每辆采集车当天的颠簸/湿滑点位数量统计，供大屏排行展示 */
+    @PostMapping(value={"/get-event-count-by-vehicle"})
+    public ResponseEntity<List<VehicleEventCountResponse>> getEventCountByVehicle(@RequestBody EventCountByVehicleRequest request) {
+        return ResponseEntity.ok(this.vehicleStatService.getEventCountByVehicle(request.getDate()));
     }
 
     @PostMapping(value={"/get-last-24h-bump-event"})

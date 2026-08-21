@@ -23,5 +23,5 @@
         <!-- P8-8.16: 健康检查端点 -->
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-actuator</artifactId></dependency>
     </dependencies>
-    <build><finalName>vaas-backend</finalName></build>
+    <build><finalName>vaas_backend</finalName></build>
 </project>

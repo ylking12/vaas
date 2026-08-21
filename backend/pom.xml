@@ -21,6 +21,8 @@
         <java.version>17</java.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <spring-boot.version>3.5.3</spring-boot.version>
         <mybatis-plus.version>3.5.12</mybatis-plus.version>
         <lombok.version>1.18.38</lombok.version>
@@ -74,8 +76,12 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <!-- SOURCE: pin to 3.13.0 — without this the version falls back to Maven default 3.1 (project uses spring-boot-dependencies BOM, not spring-boot-starter-parent, so plugin version is unmanaged). 3.1 predates the <parameters> config (added in 3.6.2), so <parameters>true</parameters> was silently ignored and -parameters was not passed to javac, dropping MethodParameters attrs. That broke @PathVariable name resolution (Spring Boot 3.x needs -parameters), causing 500 on /external/getEventSummary/{startTime}/{endTime}. Original jar had -parameters (11 MethodParameters attrs); this restores parity. -->
+                <version>3.13.0</version>
                 <configuration>
                     <source>${java.version}</source><target>${java.version}</target><parameters>true</parameters>
+                    <!-- SOURCE: Restored project includes decompiled MapStruct *Impl classes; disable AP to avoid regenerating duplicates. -->
+                    <proc>none</proc>
                     <annotationProcessorPaths>
                         <path><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><version>${lombok.version}</version></path>
                     </annotationProcessorPaths>

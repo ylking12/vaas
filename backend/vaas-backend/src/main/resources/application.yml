@@ -67,3 +67,15 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+
+# 演示用常驻颠簸点位保活（非原版还原产物，演示/验收用）
+# 向 Redis 颠簸事件 ZSet 注入一条 bump 事件并每 6h 刷新 score，使点位在大屏常驻
+# 生产环境可设 demo.bump.keepalive.enabled=false 关闭
+demo:
+  bump:
+    keepalive:
+      enabled: true
+    lng: 120.379123          # 经度
+    lat: 31.585633           # 纬度
+    road-name: 团结路庄桥路   # 路段名（显示在告警列表/养护建议）
+    # level: 5               # 可选颠簸等级，不配置则 marker tooltip 不显示等级
