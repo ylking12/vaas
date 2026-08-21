@@ -7,16 +7,21 @@
     <artifactId>detector4kt</artifactId><packaging>jar</packaging>
     <name>VaaS Detector4KT</name>
     <dependencies>
-        <dependency><groupId>com.etas.vaas</groupId><artifactId>vaas-common</artifactId></dependency>
-        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
+        <dependency>
+            <groupId>com.etas.vaas</groupId>
+            <artifactId>vaas-common</artifactId>
+            <exclusions>
+                <!-- 9.9前置对齐(2026-08-17): 线上detector4kt为纯消费者无HTTP栈, 排除common传递的webflux及其netty web server -->
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-webflux</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- 9.9前置对齐(2026-08-17): 线上detector4kt为纯消费者无HTTP栈, 移除spring-boot-starter-web/actuator; 健康检查走systemd/PID -->
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-data-redis</artifactId></dependency>
-        <dependency><groupId>com.baomidou</groupId><artifactId>mybatis-plus-spring-boot3-starter</artifactId></dependency>
-        <dependency><groupId>com.mysql</groupId><artifactId>mysql-connector-j</artifactId></dependency>
-        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-jdbc</artifactId></dependency>
         <dependency><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><optional>true</optional></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
-        <!-- P8-8.16: 健康检查端点 -->
-        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-actuator</artifactId></dependency>
     </dependencies>
     <build><finalName>detector4kt</finalName></build>
 </project>

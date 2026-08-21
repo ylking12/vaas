@@ -15,34 +15,6 @@ spring:
     password: ${DB_PASSWD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-server:
-  port: 50414
-
-detector:
-  motion:
-    bump-level-3:
-      yAmplitude: 0.14
-      zAmplitude: 0.175
-    bump-level-5:
-      yAmplitude: 0.16
-      zAmplitude: 0.20
-    bump-level-7:
-      yAmplitude: 0.20
-      zAmplitude: 0.25
-
 logging:
   level:
     com.etas.vaas.detector4motion: debug
-
-# P8-8.16: Actuator 健康检查
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-  endpoint:
-    health:
-      show-details: when-authorized
-  info:
-    env:
-      enabled: true

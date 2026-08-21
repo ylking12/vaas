@@ -96,14 +96,16 @@ public class FramePackage {
     public static class RequestData {
         private String sn;
         private String date;
-        private List<StreamData> streamData;
+        @JsonProperty(value="stream_data")
+        private List<StreamItem> streamData;
         public String getSn() { return sn; }
         public void setSn(String sn) { this.sn = sn; }
         public String getDate() { return date; }
         public void setDate(String date) { this.date = date; }
-        public List<StreamData> getStreamData() { return streamData; }
-        public void setStreamData(List<StreamData> streamData) { this.streamData = streamData; }
-        
+        public List<StreamItem> getStreamData() { return streamData; }
+        @JsonProperty(value="stream_data")
+        public void setStreamData(List<StreamItem> streamData) { this.streamData = streamData; }
+
         public static class StreamItem {
             private String name;
             private String value;

@@ -41,7 +41,6 @@ import com.etas.vaas.common.utils.RedisUtils;
 import com.etas.vaas.detector.config.PostDetectThreadPoolConfig;
 import com.etas.vaas.detector.entity.Frame;
 import com.etas.vaas.detector.entity.FramePackage;
-import com.etas.vaas.detector.entity.StreamData;
 import com.etas.vaas.detector.event.bumpy.BumpyProcessor;
 import com.etas.vaas.detector.event.slippery.SlipperyProcessor;
 import com.etas.vaas.detector.utils.StringUtils;
