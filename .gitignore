@@ -71,6 +71,9 @@ backend/admin-api/src/main/resources/passwd
 # --- Runtime logs ---
 backend/**/logs/
 
+# --- Dashboard build/deploy artifacts ---
+frontend/dashboard/www/
+
 # --- Large image assets ---
 frontend/dashboard/public/img/*.png
 frontend/dashboard/public/road_network_image/  # 原版路网图 132MB（运行时由 vite 引用，不进 git）
