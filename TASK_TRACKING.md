@@ -1,21 +1,22 @@
 # VaaS 项目复现 - 任务跟踪总表
 
-> 更新时间: 2026-06-26 | 已完成任务的详细记录已归档到 [ARCHIVE.md](./ARCHIVE.md)
+> 更新时间: 2026-08-17 | 已完成任务的详细记录已归档到 [ARCHIVE.md](./ARCHIVE.md)
 
 ## 进度概要
 
 | Phase | 总任务数 | 完成 | 进行中 | 待开始 | 进度 |
 |-------|---------|------|--------|-------|------|
-| P1 参考素材提取 | 10 | 9 | 0 | 0 | 90% | ⬅️ 1.10 已取消 |
+| P1 参考素材提取 | 9 | 9 | 0 | 0 | 100% | ⬅️ 1.10 已取消（不计入计划总数） |
 | P2 后端还原 | 20 | 20 | 0 | 0 | 100% ✅ |
 | P3 前端还原 | 6 | 6 | 0 | 0 | 100% ✅ |
 | P4 集成验证 | 4 | 4 | 0 | 0 | 100% ✅ |
 | P5 算法验证 | 2 | 2 | 0 | 0 | 100% ✅ |
-| P6 上线前整改 | 15 | 0 | 0 | 15 | 0% | 📋 已规划 |
-| P7 大屏重构 | 37 | 37 | 0 | 0 | 100% ✅ |
+| P6 生产级安全与运维加固 | 15 | 0 | 0 | 15 | 0% | 📋 未开始；不作为本轮还原等价替换的硬前置 |
+| P7 大屏重构 | 33 | 33 | 0 | 0 | 100% ✅ |
 | P7+ 后续迭代 | 7 | 7 | 0 | 0 | 100% ✅ |
 | P8 工程优化 | 16 | 16 | 0 | 0 | 100% ✅ |
-| **合计** | **114** | **99** | **0** | **15** | **87%** | ⏳ 仅剩 P6 |
+| P9 后台服务逐步线上替换 | 17 | 8 | 0 | 9 | 47% | 🔄 核心 Java 服务替换完成；9.8 admin-api、9.11 Python/模拟器 待确认 |
+| **合计** | **129** | **105** | **0** | **24** | **81%** | ⏳ 剩余 P6 + P9 |
 
 ---
 
@@ -133,20 +134,26 @@ Phase 5
 
 ---
 
-## Phase 6: 上线前整改 (0/15) 📋
+## Phase 6: 生产级安全与运维加固 (0/15) 📋
 
-```
+> **阶段定位**：Phase 6 不是“还原代码等价替换”的技术前置，而是正式生产环境的安全、配置、运维和治理加固阶段。
+>
+> **与 Phase 9 的关系**：Phase 9 已按“先核对线上行为，再逐项替换还原包”的方式完成了核心 Java 服务替换；这不代表 Phase 6 已完成，也不代表当前系统已经达到生产级安全加固标准。Phase 6 的 15 项目前仍全部未完成，后续必须单独推进并验收。
+>
+> **当前风险结论**：核心业务链路已经运行还原源码构建的服务，但仍存在明文通信、鉴权不足、凭据治理、监控告警、容灾和运维规范等生产风险。当前状态应描述为“功能替换已完成，生产加固未完成”，不能描述为“生产上线整改完成”。
+
+```text
 优先级: 🔴 P0=必须解决  🟠 P1=强烈建议  🟡 P2=建议考虑
-当前状态: 全系统HTTP明文/无鉴权/空密码，仅适合开发演示
+当前状态: 0/15；以下项目均未完成，不因 Phase 9 已替换服务而自动视为完成
 
 🔴 P0: 必须解决（6项）
 ├── 6.1 ⏳ 认证与鉴权 — API/WS 全开放，需 JWT + WS 连接认证 + CORS 白名单
 ├── 6.2 ⏳ 通信加密 — 全部 HTTP/WS 明文，需 Nginx HTTPS/WSS
-├── 6.3 ⏳ 数据库密码 — MySQL 空密码 / Redis 无认证 / admin 依赖 password.txt
+├── 6.3 ⏳ 数据库密码 — MySQL / Redis 凭据治理与 admin 密码文件整改
 ├── 6.4 ⏳ 容器化部署 — 手动 java -jar，需 Docker + docker-compose
 ├── 6.5 ⏳ 配置管理 — 硬编码 .env / localhost，需多环境配置体系
 │   └── 📌 已确认：线上大屏原始编译版使用相对路径 `/spring/v1/`（Nginx 反代），非 localhost 直连
-└── 6.6 ⏳ Nginx 反代 — 前端无生产部署方式，需统一入口 + HTTPS 终止
+└── 6.6 ⏳ Nginx 反代 — 统一入口、HTTPS 终止和生产部署规范
 
 🟠 P1: 强烈建议（4项）
 ├── 6.7 ⏳ 高可用与容灾 — 单点 MySQL/Redis/微服务，缺主从/Sentinel
@@ -222,6 +229,51 @@ Phase 7 (33/33) ✅ 首版完成 + 迭代
 └── 📊 数据监控看板 / 微服务验证可视化（预留）
 ```
 
+### 演示辅助 - 常驻颠簸点位保活 ✅ (2026-07-23)
+
+> 用户需求：演示/验收时大屏需一直展示一个固定颠簸点位。**非原版还原产物**，为新增演示辅助代码，来源已标注。
+
+- **文件**：[DemoBumpEventKeepAlive.java](backend/vaas-backend/src/main/java/com/etas/vaas/backend/cron/DemoBumpEventKeepAlive.java)（vaas-backend/cron，`@Component`）
+- **配置**：[application.yml](backend/vaas-backend/src/main/resources/application.yml) `demo.bump.*`（enabled/lng/lat/road-name/level）
+- **机制（方案 A）**：启动时向 Redis ZSet(`bumpEventKey`) 注入一条 bump 事件，每 6h 对同一 member 重新 ZADD 仅刷新 score，对抗 `CleanEventZSet` 的 24h 清理；member 运行期间固定（展示首次注入/启动时间），重启时按固定 eventId 清理旧 member 防累积
+- **点位参数**：经度 120.379123 / 纬度 31.585633 / 团结路庄桥路 / level 不传
+- **红线自查**：直接 `addToZSet` 不走 `persistEvent`（不脏 MySQL）；不调 `publishEvent`（不影响 SSE）；不改前端、不改原版业务逻辑/Redis key 命名/API 签名/表结构
+- **生效方式**：重启 vaas-backend 后，刷新大屏页面即可看到点位（score=now 落在默认窗口 [now-23h, now] 内）
+- **关闭**：生产环境设 `demo.bump.keepalive.enabled=false`
+- **编译验证**：vaas-backend 模块编译通过 ✅（DemoBumpEventKeepAlive.class 已生成）
+- **线上部署包**（2026-07-23）：`dist/vaas-backend-20260723.tar.gz`（sha256 `c4096714...`，66MB），含 `vaas_backend.jar`（sha256 `8609c1cd...`）+ `README-deploy.md`
+  - 部署目标：192.168.112.15（`vaas_backend`，`/opt/etas/vaas/vaas_backend/`），只换 jar，外部配置+unit 不动
+  - **保活已开启**（用户确认）：部署后往生产 Redis 注入常驻颠簸点位（120.379123, 31.585633, 团结路庄桥路，eventId=`DEMO_BUMP_KEEPALIVE`）
+  - 验证：MethodParameters=11（-parameters 在）、本地启动 + API 验证注入成功
+  - 回滚/清理：见 README-deploy.md（回滚旧 jar + 调 `/delete-event` 删假事件）
+  - 状态：**已部署到 15**（2026-07-23 15:29:38 注入成功，PID 1801439，日志确认 lng/lat/roadName 正确）
+- **v1 bug（2026-07-23）**：演示事件未设 deviceId（null），getAlarmList 调 `FleetManagementComponent.getDeviceId2CarMap()`（ConcurrentHashMap，不允许 null key）.get(null) 抛 NPE，告警列表 500 全空。get-last-24h-bump-event 不受影响（不查 deviceId）
+- **v2 修复**：`DemoBumpEventKeepAlive.buildMemberJson` 补 `deviceId="DEMO_DEVICE"`（占位 imei），本地验证 get-alarm-list 返回 200 + 告警正常
+- **v2 部署包**：`dist/vaas-backend-20260723.tar.gz`（tar sha256 `e491a24b...`），含 `vaas_backend.jar`（sha256 `e2ec5012...`），README 标注 v2 修复版
+- **v2 状态**：**已部署到 15**（2026-07-23 15:57:22 重启，PID 1807317；get-alarm-list 恢复 HTTP 200，演示点位+真实告警均正常；-parameters 200；cleanupOldDemoMember 已自动清 v1 旧假事件）
+
+---
+
+### 新增功能 - 采集车上报排行 ✅ (2026-08-05)
+
+> 用户需求：大屏展示每辆采集车当天上报的颠簸/湿滑点位数量。**非原版还原产物**，新增功能，来源已标注。
+
+- **后端**：
+  - [VehicleStatService.java](backend/vaas-backend/src/main/java/com/etas/vaas/backend/service/web/VehicleStatService.java)（新增 `@Service`）：按 event 表 `event_time` 日期 + `source_type` in(kt710,motionSensor) 查车辆事件，`groupingBy(sourceId)` + 映射 imei->车牌（FleetManagementComponent）+ 脱敏，按 totalCount 降序
+  - [VehicleEventCountResponse.java](backend/vaas-backend/src/main/java/com/etas/vaas/backend/dto/response/VehicleEventCountResponse.java)（新增 DTO：plate/bumpCount/slipCount/totalCount，去掉积水列）
+  - [EventCountByVehicleRequest.java](backend/vaas-backend/src/main/java/com/etas/vaas/backend/dto/request/EventCountByVehicleRequest.java)（新增请求 DTO：date）
+  - [EventController.java](backend/vaas-backend/src/main/java/com/etas/vaas/backend/controller/web/EventController.java)：新增 `POST /get-event-count-by-vehicle`
+- **前端**：
+  - [api/index.js](frontend/dashboard/src/api/index.js)：新增 `getEventCountByVehicle(date)`
+  - [DashboardPage.vue](frontend/dashboard/src/views/DashboardPage.vue)：`drawer-right` 统计区底部新增"采集车上报排行"面板（el-date-picker 选日期 + el-table 排行：车牌/颠簸/湿滑/合计），抽屉打开时加载、日期切换重查
+- **决策**：积水(PONDING)是气象站上报非采集车，去掉积水列，只统计车辆颠簸/湿滑
+- **验证**：后端编译 + package 通过；本地 `/get-event-count-by-vehicle` 返回 HTTP 200（本地 event 表无数据返回 `[]`，API 跑通）；前端 `npm run build` 通过
+- **生产时区修复（2026-08-05）**：`VehicleStatService` 的"今天"改用 `ZoneId.of("Asia/Shanghai")`（15 服务器 UTC 时区，否则边界时段查错日期）；已重新 package，jar sha256 `c8e258e4...`
+- **重新打包（2026-08-12）**：后端 `dist/vaas-backend-20260812.tar.gz`（tar sha256 `d902340c...`，jar sha256 `f1fa62aa...`）；前端轻量包 `dist/dashboard-frontend-20260812.tar.gz`（sha256 `40e528cb...`，12MB，排除大型 roadNetImg/road_network_image，沿用线上既有路网静态资源）；前端全量包 `dist/dashboard-frontend-20260812-full.tar.gz`（sha256 `f56c3a06...`，1.0G，包含完整 www/、roadNetImg/、road_network_image/）
+- **数据一致性**：SQL 逻辑与 SSH 17 实证一致（2026-08-05 当天 10 辆车、bump 110、slip 1）
+- **红线自查**：不改原版业务逻辑/算法/API/表结构/Redis key；复用 DailyReportService 范式 + FleetManagementComponent；新增文件标注"非原版还原产物"
+- **状态**：代码完成 + 本地验证通过 + 部署包已生成，**待用户自行部署**（后端 jar->15，前端构建产物->18）
+
 ---
 
 ## Phase 8: 工程优化 (16/16) ✅
@@ -256,29 +308,54 @@ Phase 8 (16/16) ✅ 全部完成
 
 ---
 
+## Phase 9: 后台服务逐步线上替换 (8/17, 0进行中) 🔄
+
+> 详细操作日志、命令与回滚记录见 [docs/phase9-replacement-log.md](./docs/phase9-replacement-log.md)
+
+**当前状态概览**
+- 已完成：9.1 线上后台服务拓扑盘点；9.2 线上配置与运行参数备份；9.3 替换准入关系补记；9.4 线上接口与数据行为基线采样；9.6 receiver；9.7 vaas-backend（15 已换，18 已停未换）；9.9 detector4kt；9.10 detector4motion
+- 进行中：无
+- 待确认：9.8 admin-api；9.11 Python / trajectory-simulator 分类确认
+- 待开始：9.5 回滚预案与演练；9.12-9.17 部署、联动、数据一致性、灰度、回归、收尾
+- 说明：Phase 9 的目标是“还原代码等价替换”，不是完成 Phase 6 的生产级安全加固。Backend@18 仅停止未换 JAR；Python/模拟器当前只确认存在相关脚本或工具，未确认其为独立线上生产服务。
+
+**替换范围**
+- 15：vaas-backend、detector4motion、detector4kt
+- 16：receiver
+- 18：Backend 已停止未换；Nginx/OpenResty 与大屏不纳入 JAR 替换
+- 17：Redis / MySQL 为中间件，不替换
+
+**Phase 9 明细（精简版）**
+
+| 编号 | 状态 | 事项 | 当前结论 / 下一步 |
+|------|------|------|------------------|
+| 9.1 | 完成 | 线上后台服务拓扑盘点 | 4 台服务器、5 个原后台服务、Nginx/Redis/MySQL 拓扑已确认 |
+| 9.2 | 完成 | 线上配置与运行参数备份 | receiver、detector4kt、detector4motion 的 unit/env/JAR/config 已采集 |
+| 9.3 | 完成 | 替换准入关系补记 | 已明确：本轮按“还原等价替换”推进，Phase 6 生产加固未完成且需后续单独验收 |
+| 9.4 | 完成 | 线上接口与数据行为基线采样 | 大屏 API、Redis key、MySQL 表、日志格式已有替换前基线 |
+| 9.5 | 待开始 | 回滚预案与演练 | 已执行服务级备份和回滚路径设计，但还未形成统一演练记录 |
+| 9.6 | 完成 | receiver@16 替换 | 已替换为 `receiver-58f999b7.jar`，服务和真实数据链路正常；Flyway 迁移资源缺失为非阻断待整改 |
+| 9.7 | 完成 | vaas-backend 替换 | Backend@15 已替换并通过线上回归；Backend@18 已停止未换，后续如重启需先评估 |
+| 9.8 | 待确认 | admin-api 替换 | 后端源码已还原编译，但管理后台前端不完整；替换前需定义可验收范围 |
+| 9.9 | 完成 | detector4kt@15 替换 | 已替换为 `detector4kt-9feb4b70.jar`，`stream_data` 兼容修复后服务和真实 slip 检测正常 |
+| 9.10 | 完成 | detector4motion@15 替换 | 已替换为还原包，纯消费者形态、Redis 消费、BUMP 检测和写库正常 |
+| 9.11 | 待确认 | Python / trajectory-simulator 分类 | 目前仅确认存在脚本/工具范围，未确认是独立线上生产服务；下一步只读盘点 |
+| 9.12 | 待开始 | 统一启动/停止/健康检查脚本适配线上 | 需基于线上真实 systemd/JAR 名称修订 |
+| 9.13 | 待开始 | Nginx 反代与前后端联动确认 | 需确认 `/spring/v1/`、SSE、静态大屏、可选 `/admin/` 路径 |
+| 9.14 | 待开始 | MySQL / Redis 数据一致性与容量检查 | 需做替换后长期数据量、key 类型、事件数量对照 |
+| 9.15 | 待开始 | 全链路灰度/分批切换 | 核心 Java 链路已逐服务替换；仍需形成正式灰度/切换记录 |
+| 9.16 | 待开始 | 生产回归验收 | 需按大屏、事件检测、联网车辆、告警、历史图表、SSE、管理后台形成验收表 |
+| 9.17 | 待开始 | 替换收尾与文档归档 | 汇总版本包、回滚包、环境变量、运维命令和剩余风险 |
+
 ## 已记录问题 / 已知缺项
 
-1. **[admin 前端还原不完整]** — 无 Source Map，目前反混淆还原了4个核心页面。原始管理后台的系统配置、设备管理、权限管理、数据报表等未还原。（详见 LESSONS_LEARNED.md#005）
+> 历史修复与现场记录已归档到 [ARCHIVE.md](./ARCHIVE.md)。本节只保留当前仍需处理或确认的项。
 
-2. **[大屏 CSS/图片未还原]** — Source Map 不映射样式和图片资源。当前通过拷贝原始文件补充 static/css 和 images。
+1. **[admin 前端还原不完整]** — 无 Source Map，系统配置/设备管理/权限管理/数据报表等仍未完整还原。
+2. **[receiver 新包缺迁移资源]** — `db/migration/*.sql` 资源缺失，Flyway 启动仍会提示 warning；服务本身已可用，后续再补齐资源。
+3. **[Python / trajectory-simulator 待核]** — 先确认它是否是独立线上生产服务；当前按测试工具/辅助脚本处理。
+4. **[Backend@18 停机未换]** — 18 号机上的原版 jar 仍保留且服务已停止，若恢复启动需先重新评估替换。
 
-3. **[Truelicense 许可证路径硬编码]** — `LicenseCreator.java` 保留 `C:\Users\SOQ2WX\...` 路径，上线前需配置化。
-
-4. ~~[B1 时间轴联动失效] — **已修复**（2026-06-22）~~（详见 ARCHIVE.md）
-
-5. ~~[B2 p7-baseline-capture.js 端口错误] — 8083→8082~~（**未修**，独立 bug）
-
-### git 未提交改动（之前 session 累积）
-
-```
-6. backend/vaas-backend/pom.xml — 4 行 diff
-7. frontend/dashboard/src/components/Popup.vue — 2 行 diff
-8. docs/_generate_pdf.py — 新文件
-9. docs/hardware-data-protocol.md — 新文件
-10. docs/通勤预警协议.pdf — 新文件
-```
-
----
 
 ## 项目文档索引
 
@@ -288,13 +365,5 @@ Phase 8 (16/16) ✅ 全部完成
 
 ## 待部署事项
 
-> 由用户在适当时机触发部署
-
-```
-待部署：大屏替换到线上环境
-├── 前置条件：线上 Nginx 已有 SPA fallback 配置
-├── [待开始] Step 1：修改 .env VITE_API_BASE 为线上地址
-├── [待开始] Step 2：npm run build 构建 dist/
-├── [待开始] Step 3：备份线上大屏 → 替换为新的 dist/
-└── 风险：无（纯静态文件替换，Nginx 配置不用改）
-```
+> 大屏线上替换已完成，原待部署清单已归档到 [ARCHIVE.md](./ARCHIVE.md)。
+> 当前无独立待部署项；新的部署/替换目标统一纳入 Phase 9 或后续任务。

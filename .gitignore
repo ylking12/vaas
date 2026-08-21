@@ -48,9 +48,28 @@ __pycache__/
 .venv/
 
 # --- Credentials ---
+.env
+.env.*
+!.env.example
+config/password.txt
 backend/config/password.txt
 backend/admin-api/config/password.txt
 backend/admin-api/src/main/resources/passwd
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+
+# --- Release archives ---
+*.tar.gz
+*.zip
+
+# --- Claude local settings ---
+.claude/settings.local.json
+
+# --- Runtime logs ---
+backend/**/logs/
 
 # --- Large image assets ---
 frontend/dashboard/public/img/*.png
